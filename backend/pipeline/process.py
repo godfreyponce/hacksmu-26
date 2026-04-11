@@ -98,6 +98,72 @@ def _estimate_fundamental(audio: np.ndarray, start_sec: float, end_sec: float,
     return round(peak_freq, 2)
 
 
+def _auto_detect_calls(H_mag: np.ndarray, sr: int, n_fft: int = 4096,
+                        min_duration: float = 0.5, merge_gap: float = 0.5) -> list:
+    """
+    Auto-detect likely elephant call regions from the HPSS harmonic magnitude.
+
+    For recordings with no labeled calls, we can still find probable call regions
+    by looking for bursts of harmonic energy in the 10-200 Hz band.
+
+    Steps:
+    1. Sum harmonic energy in 10-200 Hz per time frame
+    2. Smooth with a median filter to remove transient spikes
+    3. Threshold at mean + 1 std → candidate regions
+    4. Merge nearby candidates (gap < merge_gap seconds)
+    5. Drop regions shorter than min_duration
+
+    Returns list of (start_sec, end_sec) tuples.
+    """
+    from scipy.ndimage import median_filter
+
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
+    band = (freqs >= 10) & (freqs <= 200)
+
+    # Energy in elephant frequency band per time frame
+    energy = H_mag[band].sum(axis=0)
+
+    # Smooth to remove transient spikes (window ~0.25s worth of frames)
+    hop_length = n_fft // 4
+    frames_per_quarter_sec = max(1, int(0.25 * sr / hop_length))
+    energy_smooth = median_filter(energy, size=frames_per_quarter_sec)
+
+    # Threshold: frames above mean + 1 std are candidate call frames
+    threshold = np.mean(energy_smooth) + np.std(energy_smooth)
+    active = energy_smooth > threshold
+
+    # Convert frame indices to time
+    frame_times = librosa.frames_to_time(np.arange(len(active)), sr=sr, hop_length=hop_length)
+
+    # Find contiguous active regions
+    regions = []
+    in_region = False
+    start = 0.0
+    for i, is_active in enumerate(active):
+        t = frame_times[i]
+        if is_active and not in_region:
+            start = t
+            in_region = True
+        elif not is_active and in_region:
+            regions.append((start, t))
+            in_region = False
+    if in_region:
+        regions.append((start, frame_times[-1]))
+
+    # Merge regions separated by less than merge_gap
+    merged = []
+    for s, e in regions:
+        if merged and s - merged[-1][1] < merge_gap:
+            merged[-1] = (merged[-1][0], e)
+        else:
+            merged.append((s, e))
+
+    # Filter out regions shorter than min_duration
+    merged = [(s, e) for s, e in merged if e - s >= min_duration]
+
+    return merged
+
+
 def _save_spectrogram(audio: np.ndarray, sr: int, path: str, title: str,
                       n_fft: int = 4096) -> None:
     """
@@ -461,6 +527,16 @@ def process_recording(wav_path: str, csv_path: str, output_dir: str,
     # Step 3: HPSS — separate harmonic (calls) from percussive (noise)
     y_harmonic, D_phase, H_mag = step3_hpss(y, sr, n_fft=n_fft, kernel_size=hpss_kernel_size)
 
+    # Auto-detect calls for unlabeled recordings using harmonic energy peaks
+    detection_method = "labeled"
+    if not calls:
+        auto_calls = _auto_detect_calls(H_mag, sr, n_fft=n_fft)
+        if auto_calls:
+            calls = auto_calls
+            call_types = ["auto-detected"] * len(calls)
+            detection_method = "auto"
+            print(f"     Auto-detected {len(calls)} probable call regions")
+
     # Step 4: Spectral gating + bandpass filter
     y_cleaned = step4_spectral_gate_and_bandpass(
         y_harmonic, sr, noise_profile, D_phase,
@@ -490,6 +566,7 @@ def process_recording(wav_path: str, csv_path: str, output_dir: str,
         "snr_before_db": round(snr_before, 2),
         "snr_after_db": round(snr_after, 2),
         "snr_improvement_db": round(improvement, 2),
+        "detection_method": detection_method,
         "calls_detected": calls_detected,
         "processing_params": {
             "n_fft": n_fft,

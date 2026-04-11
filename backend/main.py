@@ -190,6 +190,86 @@ def get_call(call_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Comparison & waveform endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/comparisons/{call_id}.png")
+def serve_comparison(call_id: str):
+    """Serve the side-by-side comparison spectrogram for a recording."""
+    file_path = _resolve_output_file(call_id, "comparison.png")
+    return FileResponse(file_path, media_type="image/png")
+
+
+@app.get("/waveforms/{call_id}.png")
+def serve_waveform(call_id: str):
+    """Serve the waveform overlay image with call regions highlighted."""
+    file_path = _resolve_output_file(call_id, "waveform.png")
+    return FileResponse(file_path, media_type="image/png")
+
+
+# ---------------------------------------------------------------------------
+# Demo page
+# ---------------------------------------------------------------------------
+
+@app.get("/demo")
+def serve_demo():
+    """Serve the standalone A/B demo HTML page."""
+    demo_path = os.path.join(OUTPUT_DIR, "demo.html")
+    if not os.path.isfile(demo_path):
+        raise HTTPException(status_code=404, detail="demo.html not found — run visualize.py first")
+    return FileResponse(demo_path, media_type="text/html")
+
+
+# ---------------------------------------------------------------------------
+# Summary statistics
+# ---------------------------------------------------------------------------
+
+@app.get("/api/summary")
+def get_summary():
+    """Aggregate stats across all processed recordings — useful for the dashboard header."""
+    if not os.path.isfile(SUMMARY_PATH):
+        raise HTTPException(status_code=503, detail="summary.json not found")
+
+    with open(SUMMARY_PATH) as f:
+        raw = json.load(f)
+
+    valid = [r for r in raw if "error" not in r]
+    labeled = [r for r in valid if r.get("snr_improvement_db", 0) != 0]
+    unlabeled = [r for r in valid if r.get("snr_improvement_db", 0) == 0]
+    improved = [r for r in labeled if r.get("snr_improvement_db", 0) > 0]
+
+    # Group by noise type (extracted from filename: e.g. "vehicle", "airplane", "generator")
+    by_type = {}
+    for r in labeled:
+        stem = os.path.splitext(r["filename"])[0]
+        # Noise type is in the filename after the ID prefix
+        for noise_type in ["generator", "airplane", "vehicle", "background"]:
+            if noise_type in stem.lower():
+                by_type.setdefault(noise_type, []).append(r.get("snr_improvement_db", 0))
+                break
+
+    improvements = [r["snr_improvement_db"] for r in labeled]
+    best = max(valid, key=lambda r: r.get("snr_improvement_db", 0))
+    total_calls = sum(len(r.get("calls_detected", [])) for r in valid)
+
+    return {
+        "total_recordings": len(valid),
+        "improved_count": len(improved),
+        "unlabeled_count": len(unlabeled),
+        "mean_improvement_db": round(sum(improvements) / len(improvements), 1) if improvements else 0,
+        "best": {
+            "filename": best["filename"],
+            "snr_improvement_db": best.get("snr_improvement_db", 0),
+        },
+        "by_noise_type": {
+            k: {"count": len(v), "mean_improvement_db": round(sum(v) / len(v), 1)}
+            for k, v in sorted(by_type.items())
+        },
+        "total_calls_detected": total_calls,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 
