@@ -196,17 +196,27 @@ def step2_noise_profile(y: np.ndarray, sr: int, calls: list, n_fft: int = 4096) 
     one recording will have a different spectral shape than road noise in another.
     """
     print("  [2/6] Building noise profile from silence gaps ...")
-    mask = _build_call_mask(len(y), calls, sr)
-    noise_samples = y[~mask]
 
-    if len(noise_samples) < n_fft:
-        # Edge case: calls span almost the entire file — use the whole signal
-        print("     Warning: almost no non-call audio. Using full signal for noise profile.")
-        noise_samples = y
+    if not calls:
+        # No labeled calls — can't identify noise-only segments.
+        # Use percentile-based estimation: the 25th percentile of spectral energy
+        # across time gives the noise floor. This assumes noise is present in at
+        # least 75% of frames (true for recordings dominated by mechanical noise).
+        print("     No labeled calls — using percentile-based noise estimation.")
+        D_full = np.abs(librosa.stft(y, n_fft=n_fft))
+        noise_profile = np.percentile(D_full, 25, axis=1, keepdims=True)
+    else:
+        mask = _build_call_mask(len(y), calls, sr)
+        noise_samples = y[~mask]
 
-    D_noise = librosa.stft(noise_samples, n_fft=n_fft)
-    # keepdims=True keeps shape (n_freqs, 1) so we can broadcast against (n_freqs, n_frames)
-    noise_profile = np.mean(np.abs(D_noise), axis=1, keepdims=True)
+        if len(noise_samples) < n_fft:
+            # Edge case: calls span almost the entire file — use the whole signal
+            print("     Warning: almost no non-call audio. Using full signal for noise profile.")
+            noise_samples = y
+
+        D_noise = librosa.stft(noise_samples, n_fft=n_fft)
+        # keepdims=True keeps shape (n_freqs, 1) so we can broadcast against (n_freqs, n_frames)
+        noise_profile = np.mean(np.abs(D_noise), axis=1, keepdims=True)
     print(f"     Noise profile shape: {noise_profile.shape} | "
           f"Mean noise floor: {float(noise_profile.mean()):.4f}")
     return noise_profile
@@ -349,23 +359,33 @@ def step6_snr_validation(y: np.ndarray, y_cleaned: np.ndarray,
     preserved.
     """
     print("  [6/6] Computing SNR metrics ...")
-    snr_before = _compute_snr(y, calls, sr)
-    snr_after = _compute_snr(y_cleaned, calls, sr)
-    improvement = snr_after - snr_before
 
-    print(f"     SNR before: {snr_before:.1f} dB")
-    print(f"     SNR after:  {snr_after:.1f} dB")
-    print(f"     Improvement: {improvement:+.1f} dB")
+    if not calls:
+        # No labeled calls — can't compute meaningful call-vs-noise SNR.
+        # Report 0.0 instead of nonsensical -160 dB values.
+        print("     No labeled calls — SNR metrics not applicable.")
+        snr_before = 0.0
+        snr_after = 0.0
+        improvement = 0.0
+        calls_detected = []
+    else:
+        snr_before = _compute_snr(y, calls, sr)
+        snr_after = _compute_snr(y_cleaned, calls, sr)
+        improvement = snr_after - snr_before
 
-    calls_detected = []
-    for i, (start, end) in enumerate(calls):
-        fundamental = _estimate_fundamental(y_cleaned, start, end, sr, n_fft=n_fft)
-        calls_detected.append({
-            "start_time": round(start, 3),
-            "end_time": round(end, 3),
-            "call_type": call_types[i] if i < len(call_types) else "unknown",
-            "estimated_fundamental_hz": fundamental,
-        })
+        print(f"     SNR before: {snr_before:.1f} dB")
+        print(f"     SNR after:  {snr_after:.1f} dB")
+        print(f"     Improvement: {improvement:+.1f} dB")
+
+        calls_detected = []
+        for i, (start, end) in enumerate(calls):
+            fundamental = _estimate_fundamental(y_cleaned, start, end, sr, n_fft=n_fft)
+            calls_detected.append({
+                "start_time": round(start, 3),
+                "end_time": round(end, 3),
+                "call_type": call_types[i] if i < len(call_types) else "unknown",
+                "estimated_fundamental_hz": fundamental,
+            })
 
     return snr_before, snr_after, improvement, calls_detected
 
@@ -421,6 +441,22 @@ def process_recording(wav_path: str, csv_path: str, output_dir: str,
 
     # Step 2: Noise profile (from non-call gaps)
     noise_profile = step2_noise_profile(y, sr, calls, n_fft=n_fft)
+
+    # Adaptive parameter tuning for difficult recordings:
+    # - No labeled calls: use gentle params since we can't precisely identify signal
+    # - Low SNR (noise louder than signal): reduce aggressiveness to preserve calls
+    if not calls:
+        hpss_kernel_size = min(hpss_kernel_size, 17)
+        oversubtraction = min(oversubtraction, 0.8)
+        print(f"     Adaptive: no calls → kernel_size={hpss_kernel_size}, "
+              f"oversubtraction={oversubtraction}")
+    else:
+        rough_snr = _compute_snr(y, calls, sr)
+        if rough_snr < 0:
+            hpss_kernel_size = min(hpss_kernel_size, 21)
+            oversubtraction = min(oversubtraction, 1.0)
+            print(f"     Adaptive: low SNR ({rough_snr:.1f} dB) → kernel_size={hpss_kernel_size}, "
+                  f"oversubtraction={oversubtraction}")
 
     # Step 3: HPSS — separate harmonic (calls) from percussive (noise)
     y_harmonic, D_phase, H_mag = step3_hpss(y, sr, n_fft=n_fft, kernel_size=hpss_kernel_size)
