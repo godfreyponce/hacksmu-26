@@ -1,12 +1,15 @@
-// Mapbox GL heatmap
-
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
 
-export default function CallMap() {
+function pseudoCoord(seed) {
+  const n = Number(seed) || 0
+  return [36.7 + (n % 12) * 0.08, -1.35 + (n % 9) * 0.06]
+}
+
+export default function CallMap({ calls = [], selectedId }) {
   const mapContainer = useRef(null)
   const map = useRef(null)
 
@@ -49,6 +52,30 @@ export default function CallMap() {
 
     return () => map.current?.remove()
   }, [])
+
+  useEffect(() => {
+    if (!map.current) return
+
+    const features = calls.map((call, idx) => {
+      const [lng, lat] = pseudoCoord(call.id || idx + 1)
+      return {
+        type: 'Feature',
+        properties: {
+          id: call.id,
+          selected: call.id === selectedId ? 1 : 0
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [lng, lat]
+        }
+      }
+    })
+
+    const source = map.current.getSource('calls')
+    if (source) {
+      source.setData({ type: 'FeatureCollection', features })
+    }
+  }, [calls, selectedId])
 
   return <div ref={mapContainer} className="call-map" />
 }

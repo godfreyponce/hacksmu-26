@@ -1,11 +1,47 @@
-// ElevenLabs STT → Gemini → TTS
-
 import { useState, useCallback } from 'react'
 
 export default function useVoiceQuery() {
   const [isListening, setIsListening] = useState(false)
   const [response, setResponse] = useState(null)
   const apiUrl = import.meta.env.VITE_API_URL
+  const elevenKey = import.meta.env.VITE_ELEVENLABS_API_KEY
+  const elevenVoiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'
+  const authToken = import.meta.env.VITE_AUTH0_M2M_TOKEN
+
+  const transcribeWithElevenLabs = async (blob) => {
+    const formData = new FormData()
+    formData.append('file', blob, 'query.webm')
+    formData.append('model_id', 'scribe_v1')
+
+    const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+      method: 'POST',
+      headers: { 'xi-api-key': elevenKey },
+      body: formData
+    })
+    if (!res.ok) throw new Error('STT failed')
+    const data = await res.json()
+    return data.text || ''
+  }
+
+  const speakWithElevenLabs = async (text) => {
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenVoiceId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': elevenKey
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_turbo_v2_5'
+      })
+    })
+    if (!res.ok) return
+
+    const audioBlob = await res.blob()
+    const url = URL.createObjectURL(audioBlob)
+    const audio = new Audio(url)
+    audio.play().finally(() => URL.revokeObjectURL(url))
+  }
 
   const startListening = useCallback(async () => {
     setIsListening(true)
@@ -20,19 +56,23 @@ export default function useVoiceQuery() {
 
       mediaRecorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'audio/webm' })
-        const formData = new FormData()
-        formData.append('audio', blob)
+        const text = await transcribeWithElevenLabs(blob)
 
-        const res = await fetch(`${apiUrl}/api/query`, {
+        const res = await fetch(`${apiUrl}/query`, {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({ text })
         })
-        const data = await res.json()
-        setResponse(data.text)
 
-        if (data.audio_url) {
-          const audio = new Audio(data.audio_url)
-          audio.play()
+        const data = await res.json()
+        const answer = data.answer || 'No answer received.'
+        setResponse(answer)
+
+        if (elevenKey) {
+          speakWithElevenLabs(answer).catch((e) => console.error('TTS failed:', e))
         }
 
         stream.getTracks().forEach(track => track.stop())
@@ -49,9 +89,10 @@ export default function useVoiceQuery() {
 
     } catch (err) {
       console.error('Voice query error:', err)
+      setResponse('Voice query failed. Check API keys and auth token.')
       setIsListening(false)
     }
-  }, [apiUrl])
+  }, [apiUrl, authToken, elevenKey])
 
   const stopListening = useCallback(() => {
     setIsListening(false)

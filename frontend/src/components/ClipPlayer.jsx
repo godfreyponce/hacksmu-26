@@ -1,18 +1,16 @@
-// Audio playback with waveform
-
 import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 
-export default function ClipPlayer({ callId }) {
+const stages = ['hpss', 'gated', 'clean']
+
+export default function ClipPlayer({ call }) {
   const containerRef = useRef(null)
   const wavesurfer = useRef(null)
-  const [playClean, setPlayClean] = useState(false)
+  const [stage, setStage] = useState('clean')
   const apiUrl = import.meta.env.VITE_API_URL
 
-  const variant = playClean ? 'clean' : 'noisy'
-
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current || !call) return
 
     wavesurfer.current = WaveSurfer.create({
       container: containerRef.current,
@@ -25,24 +23,27 @@ export default function ClipPlayer({ callId }) {
       responsive: true
     })
 
-    wavesurfer.current.load(`${apiUrl}/clips/${callId}_${variant}.wav`)
+    wavesurfer.current.load(`${apiUrl}/calls/${call.id}/audio/${stage}`)
 
     return () => wavesurfer.current?.destroy()
-  }, [callId, variant, apiUrl])
+  }, [call, stage, apiUrl])
 
   const handlePlayPause = () => {
     wavesurfer.current?.playPause()
   }
 
+  if (!call) {
+    return <div className="clip-player">No audio available.</div>
+  }
+
   return (
     <div className="clip-player">
-      <div className="toggle">
-        <button onClick={() => setPlayClean(false)} className={!playClean ? 'active' : ''}>
-          Noisy
-        </button>
-        <button onClick={() => setPlayClean(true)} className={playClean ? 'active' : ''}>
-          Clean
-        </button>
+      <div className="toggle stage-toggle">
+        {stages.map((item) => (
+          <button key={item} onClick={() => setStage(item)} className={stage === item ? 'active' : ''}>
+            {item.toUpperCase()}
+          </button>
+        ))}
       </div>
       <div ref={containerRef} className="waveform" />
       <button onClick={handlePlayPause}>Play / Pause</button>

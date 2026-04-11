@@ -1,25 +1,32 @@
-// Noisy / clean spectrogram toggle
-
 import { useState } from 'react'
 
-export default function SpecViewer({ callId }) {
-  const [showClean, setShowClean] = useState(false)
+const stages = ['hpss', 'gated', 'clean']
+
+export default function SpecViewer({ call }) {
+  const [stage, setStage] = useState('clean')
   const apiUrl = import.meta.env.VITE_API_URL
 
-  const variant = showClean ? 'clean' : 'noisy'
-  const imageSrc = `${apiUrl}/spectrograms/${callId}_${variant}.png`
+  if (!call) {
+    return <div className="spec-viewer">No processed calls yet.</div>
+  }
+
+  const imageSrc = `${apiUrl}/calls/${call.id}/spectrogram/${stage}`
 
   return (
     <div className="spec-viewer">
-      <div className="toggle">
-        <button onClick={() => setShowClean(false)} className={!showClean ? 'active' : ''}>
-          Noisy
-        </button>
-        <button onClick={() => setShowClean(true)} className={showClean ? 'active' : ''}>
-          Clean
-        </button>
+      <div className="toggle stage-toggle">
+        {stages.map((item) => (
+          <button key={item} onClick={() => setStage(item)} className={stage === item ? 'active' : ''}>
+            {item.toUpperCase()}
+          </button>
+        ))}
       </div>
-      <img src={imageSrc} alt={`Spectrogram ${callId} (${variant})`} />
+      <img src={imageSrc} alt={`Spectrogram ${call.call_id_csv} (${stage})`} />
+      <div className="call-metadata">
+        <p>Type: {call.call_type || 'unknown'}</p>
+        <p>Fundamental: {call.fundamental_hz || 'n/a'} Hz</p>
+        <p>Harmonics: {(call.harmonics || []).join(', ') || 'n/a'}</p>
+      </div>
     </div>
   )
 }
