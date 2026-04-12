@@ -253,6 +253,7 @@ export default function LandingPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             className="btn btn-primary"
+            onClick={() => navigate('/demo')}
             style={{ fontFamily: 'DM Sans, Avenir Next, sans-serif', fontSize: '14px', padding: '12px 26px' }}
           >
             Live Demo
@@ -366,12 +367,12 @@ export default function LandingPage() {
                 212 elephant calls, buried beneath generators and traffic. We found every one.
               </p>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '22px', flexWrap: 'wrap' }}>
-                <button className="btn btn-primary" onClick={() => navigate('/research')}>
+                <button className="btn btn-primary" onClick={() => navigate('/demo')}>
+                  Try it yourself
+                </button>
+                <button className="btn btn-outline" onClick={() => navigate('/research')}>
                   Explore the data
                 </button>
-                <a className="btn btn-outline" href="#science">
-                  The science
-                </a>
               </div>
             </div>
           </div>

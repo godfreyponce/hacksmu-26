@@ -18,8 +18,10 @@ To run:
 
 import json
 import os
+import shutil
+import uuid
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -231,6 +233,70 @@ Provide a helpful, scientifically accurate response. Keep it concise."""
                   f"Best result: {best.get('filename','')} at +{best.get('snr_improvement_db',0):.1f} dB. "
                   f"Set GOOGLE_API_KEY for detailed AI-powered answers."
     }
+
+
+# ---------------------------------------------------------------------------
+# Real-time processing (upload a .wav, run pipeline, return results)
+# ---------------------------------------------------------------------------
+
+TEMP_DIR = os.path.join(OUTPUT_DIR, "_temp")
+CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "calls.csv")
+
+
+@app.post("/process")
+async def process_upload(file: UploadFile = File(...)):
+    """Accept a .wav upload, run the full pipeline, return results."""
+    if not file.filename.lower().endswith(".wav"):
+        raise HTTPException(400, "Only .wav files are supported")
+
+    session_id = uuid.uuid4().hex[:12]
+    session_dir = os.path.join(TEMP_DIR, session_id)
+    os.makedirs(session_dir, exist_ok=True)
+
+    # Save uploaded file
+    wav_path = os.path.join(session_dir, file.filename)
+    with open(wav_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    # Run pipeline — handle both `uvicorn backend.main:app` and direct run
+    import sys
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    from backend.pipeline.process import process_recording
+
+    out_dir = os.path.join(session_dir, "output")
+    os.makedirs(out_dir, exist_ok=True)
+
+    try:
+        results = process_recording(wav_path, CSV_PATH, out_dir)
+    except Exception as e:
+        raise HTTPException(500, f"Processing failed: {e}")
+
+    # Build response
+    base_url = f"/temp/{session_id}"
+    shaped = _call_to_frontend_shape(results)
+    shaped["session_id"] = session_id
+    shaped["spectrogram_before_url"] = f"{base_url}/output/spectrogram_before.png"
+    shaped["spectrogram_after_url"] = f"{base_url}/output/spectrogram_after.png"
+    shaped["audio_original_url"] = f"{base_url}/output/original.wav"
+    shaped["audio_cleaned_url"] = f"{base_url}/output/cleaned.wav"
+    return shaped
+
+
+@app.get("/temp/{session_id}/{path:path}")
+def serve_temp_file(session_id: str, path: str):
+    """Serve files from a temporary processing session."""
+    file_path = os.path.abspath(os.path.join(TEMP_DIR, session_id, path))
+    # Prevent directory traversal
+    if not file_path.startswith(os.path.abspath(TEMP_DIR)):
+        raise HTTPException(403, "Forbidden")
+    if not os.path.isfile(file_path):
+        raise HTTPException(404, "File not found")
+    ext = os.path.splitext(file_path)[1].lower()
+    media = {".wav": "audio/wav", ".png": "image/png", ".json": "application/json"}
+    return FileResponse(file_path, media_type=media.get(ext, "application/octet-stream"))
 
 
 # ---------------------------------------------------------------------------
