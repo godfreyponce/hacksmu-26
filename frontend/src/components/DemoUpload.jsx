@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom'
 
 const PIPELINE_STEPS = [
   { label: 'Loading audio', detail: 'Reading WAV file and detecting sample rate' },
-  { label: 'Building noise profile', detail: 'Estimating background noise characteristics' },
-  { label: 'Separating harmonics (HPSS)', detail: 'Splitting harmonic elephant calls from percussive noise' },
-  { label: 'Applying spectral gate', detail: 'Removing residual noise with bandpass filter' },
-  { label: 'Generating spectrograms', detail: 'Creating before & after visualizations' },
+  { label: 'Structural separation (HPSS)', detail: 'Exploiting that elephant calls are harmonic (horizontal bands) while noise is broadband' },
+  { label: 'Spectral subtraction', detail: 'Removing residual broadband noise from the harmonic component' },
+  { label: 'Bandpass filtering', detail: 'Isolating 8–1200 Hz range where elephant vocalizations live' },
+  { label: 'Generating spectrograms', detail: 'Creating before & after frequency visualizations' },
   { label: 'Computing SNR', detail: 'Measuring signal-to-noise ratio improvement' },
 ]
 
@@ -307,7 +307,6 @@ export default function DemoUpload() {
                       <th>Start</th>
                       <th>End</th>
                       <th>Duration</th>
-                      <th>Fundamental</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -318,7 +317,6 @@ export default function DemoUpload() {
                         <td className="call-time">{formatTime(call.start_time)}</td>
                         <td className="call-time">{formatTime(call.end_time)}</td>
                         <td className="call-time">{call.start_time != null && call.end_time != null ? `${(call.end_time - call.start_time).toFixed(1)}s` : '--'}</td>
-                        <td className="call-freq">{call.estimated_fundamental_hz ? `${call.estimated_fundamental_hz.toFixed(1)} Hz` : '--'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -330,7 +328,7 @@ export default function DemoUpload() {
           {/* Extra stats */}
           <div className="demo-extra-stats">
             <span>Duration: {results.duration_seconds?.toFixed(1)}s</span>
-            <span>Detection: {results.detection_method}</span>
+            <span>Detection: {results.detection_method === 'auto' ? 'auto (HPSS harmonic energy)' : 'labeled (CSV timestamps)'}</span>
             <span>No ML models — pure DSP</span>
           </div>
 

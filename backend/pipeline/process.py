@@ -194,11 +194,10 @@ def _save_spectrogram(audio: np.ndarray, sr: int, path: str, title: str,
         hop_length=n_fft // 4,
         x_axis="time",
         y_axis="hz",
-        fmin=0,
-        fmax=5000,
         ax=ax,
         cmap="magma",
     )
+    ax.set_ylim(0, 5000)
 
     cbar = fig.colorbar(img, ax=ax, format="%+2.0f dB")
     cbar.ax.yaxis.set_tick_params(color="white")
