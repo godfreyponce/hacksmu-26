@@ -2,30 +2,43 @@ import { useState } from 'react'
 import { buildApiUrl } from '../lib/api'
 
 const stages = ['hpss', 'gated', 'clean']
+const stageLabels = { hpss: 'Original', gated: 'Gated', clean: 'Cleaned' }
 
 export default function SpecViewer({ call }) {
   const [stage, setStage] = useState('clean')
 
   if (!call) {
-    return <div className="spec-viewer">No processed calls yet.</div>
+    return (
+      <div className="panel panel-empty">
+        <p>Select a recording to view spectrogram</p>
+      </div>
+    )
   }
 
   const imageSrc = buildApiUrl(`/calls/${call.id}/spectrogram/${stage}`)
 
   return (
-    <div className="spec-viewer">
-      <div className="toggle stage-toggle">
-        {stages.map((item) => (
-          <button key={item} onClick={() => setStage(item)} className={stage === item ? 'active' : ''}>
-            {item.toUpperCase()}
-          </button>
-        ))}
+    <div className="panel panel-spec">
+      <div className="panel-header">
+        <h4>Spectrogram</h4>
+        <div className="panel-toggle">
+          {stages.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStage(s)}
+              className={stage === s ? 'is-active' : ''}
+            >
+              {stageLabels[s]}
+            </button>
+          ))}
+        </div>
       </div>
-      <img src={imageSrc} alt={`Spectrogram ${call.call_id_csv} (${stage})`} />
-      <div className="call-metadata">
-        <p>Type: {call.call_type || 'unknown'}</p>
-        <p>Fundamental: {call.fundamental_hz || 'n/a'} Hz</p>
-        <p>Harmonics: {(call.harmonics || []).join(', ') || 'n/a'}</p>
+      <div className="panel-image">
+        <img src={imageSrc} alt={`${call.call_id_csv} ${stage}`} />
+      </div>
+      <div className="panel-meta">
+        <span>Type: <strong>{call.call_type || 'unknown'}</strong></span>
+        <span>SNR Δ: <strong className="panel-meta-highlight">+{(call.snr_improvement_db ?? 0).toFixed(1)} dB</strong></span>
       </div>
     </div>
   )

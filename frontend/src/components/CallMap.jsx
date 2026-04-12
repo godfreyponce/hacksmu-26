@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
+mapboxgl.accessToken = MAPBOX_TOKEN || ''
 
 function pseudoCoord(seed) {
   const n = Number(seed) || 0
@@ -12,8 +13,10 @@ function pseudoCoord(seed) {
 export default function CallMap({ calls = [], selectedId }) {
   const mapContainer = useRef(null)
   const map = useRef(null)
+  const hasToken = Boolean(MAPBOX_TOKEN)
 
   useEffect(() => {
+    if (!hasToken) return
     if (map.current) return
 
     map.current = new mapboxgl.Map({
@@ -51,9 +54,10 @@ export default function CallMap({ calls = [], selectedId }) {
     })
 
     return () => map.current?.remove()
-  }, [])
+  }, [hasToken])
 
   useEffect(() => {
+    if (!hasToken) return
     if (!map.current) return
 
     const features = calls.map((call, idx) => {
@@ -75,7 +79,16 @@ export default function CallMap({ calls = [], selectedId }) {
     if (source) {
       source.setData({ type: 'FeatureCollection', features })
     }
-  }, [calls, selectedId])
+  }, [calls, selectedId, hasToken])
+
+  if (!hasToken) {
+    return (
+      <div className="call-map call-map-disabled">
+        <h3>Map disabled</h3>
+        <p>Set <code>VITE_MAPBOX_TOKEN</code> in <code>frontend/.env</code> to enable the call-distribution map.</p>
+      </div>
+    )
+  }
 
   return <div ref={mapContainer} className="call-map" />
 }
