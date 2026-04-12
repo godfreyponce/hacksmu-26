@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const PIPELINE_STEPS = [
@@ -10,17 +10,25 @@ const PIPELINE_STEPS = [
   { label: 'Computing SNR', detail: 'Measuring signal-to-noise ratio improvement' },
 ]
 
+function formatTime(seconds) {
+  if (seconds == null) return '--'
+  const m = Math.floor(seconds / 60)
+  const s = (seconds % 60).toFixed(1)
+  return `${m}:${s.padStart(4, '0')}`
+}
+
 export default function DemoUpload() {
   const navigate = useNavigate()
   const apiUrl = import.meta.env.VITE_API_URL
   const fileInputRef = useRef(null)
 
-  const [phase, setPhase] = useState('upload') // upload | processing | results
+  const [phase, setPhase] = useState('upload')
   const [dragOver, setDragOver] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
   const [snrExpanded, setSnrExpanded] = useState(false)
+  const [specView, setSpecView] = useState('after')
 
   const resolveAssetUrl = useCallback((path) => {
     if (!path) return ''
@@ -33,12 +41,8 @@ export default function DemoUpload() {
     setCurrentStep(0)
     setError(null)
 
-    // Animate steps while processing happens
     const stepTimer = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev < PIPELINE_STEPS.length - 2) return prev + 1
-        return prev
-      })
+      setCurrentStep((prev) => (prev < PIPELINE_STEPS.length - 2 ? prev + 1 : prev))
     }, 1800)
 
     try {
@@ -53,15 +57,11 @@ export default function DemoUpload() {
       const data = await res.json()
 
       clearInterval(stepTimer)
-
-      // Finish remaining steps quickly
-      for (let i = currentStep; i < PIPELINE_STEPS.length; i++) {
-        await new Promise((r) => setTimeout(r, 300))
-        setCurrentStep(i)
+      for (let i = 0; i < PIPELINE_STEPS.length; i++) {
+        await new Promise((r) => setTimeout(r, 250))
+        setCurrentStep(i + 1)
       }
-      setCurrentStep(PIPELINE_STEPS.length)
-
-      await new Promise((r) => setTimeout(r, 600))
+      await new Promise((r) => setTimeout(r, 500))
       setResults(data)
       setPhase('results')
     } catch (err) {
@@ -92,6 +92,7 @@ export default function DemoUpload() {
     setResults(null)
     setError(null)
     setCurrentStep(0)
+    setSpecView('after')
   }
 
   // ── Upload Screen ──
@@ -109,7 +110,8 @@ export default function DemoUpload() {
         <div className="demo-upload-content">
           <h1>Test our pipeline <em>in real time</em></h1>
           <p className="demo-upload-sub">
-            Drop an elephant field recording and watch HPSS separate calls from noise — no ML models, pure signal processing.
+            Elephant field recordings from Amboseli are buried in generator, vehicle, and aircraft noise.
+            Drop a recording and watch our HPSS pipeline separate calls from noise — pure signal processing, no ML models.
           </p>
 
           <div
@@ -136,6 +138,10 @@ export default function DemoUpload() {
               style={{ display: 'none' }}
             />
           </div>
+
+          <p className="demo-upload-footer">
+            Runs a 6-stage pipeline: Load → Noise Profile → HPSS → Spectral Gate → Spectrogram → SNR Validation
+          </p>
 
           {error && <p className="demo-error">{error}</p>}
         </div>
@@ -192,6 +198,8 @@ export default function DemoUpload() {
   // ── Results Screen ──
   if (phase === 'results' && results) {
     const improvement = results.snr_improvement_db
+    const calls = results.calls || []
+
     return (
       <div className="demo-upload-page">
         <nav className="demo-nav">
@@ -203,8 +211,16 @@ export default function DemoUpload() {
         </nav>
 
         <div className="demo-results">
-          <h2>Results</h2>
-          <p className="demo-results-filename">{results.call_id_csv}</p>
+          {/* Header */}
+          <div className="demo-results-header">
+            <div>
+              <h2>Analysis Complete</h2>
+              <p className="demo-results-filename">{results.call_id_csv}</p>
+            </div>
+            <div className="demo-results-pipeline-tag">
+              HPSS → Spectral Gate → Bandpass
+            </div>
+          </div>
 
           {/* SNR Metrics */}
           <div className="snr-metrics">
@@ -238,20 +254,29 @@ export default function DemoUpload() {
               is compared to background noise, in decibels (dB). Higher is better. Our HPSS pipeline
               improved this recording by <strong>+{improvement?.toFixed(1)} dB</strong> — meaning the
               elephant call is now {Math.round(Math.pow(10, (improvement || 0) / 20))}x louder
-              relative to the noise floor.
+              relative to the noise floor. This enables researchers to analyze vocalizations that were
+              previously inaudible beneath mechanical noise.
             </div>
           )}
 
-          {/* Spectrograms */}
-          <div className="demo-spectrograms">
-            <div className="demo-spec-col">
-              <h3>Before (noisy)</h3>
-              <img src={resolveAssetUrl(results.spectrogram_before_url)} alt="Spectrogram before" />
+          {/* Spectrogram with toggle */}
+          <div className="demo-spec-section">
+            <div className="demo-spec-header">
+              <h3>Spectrogram</h3>
+              <div className="demo-spec-toggle">
+                <button className={specView === 'before' ? 'active' : ''} onClick={() => setSpecView('before')}>
+                  Before (noisy)
+                </button>
+                <button className={specView === 'after' ? 'active' : ''} onClick={() => setSpecView('after')}>
+                  After (cleaned)
+                </button>
+              </div>
             </div>
-            <div className="demo-spec-col">
-              <h3>After (cleaned)</h3>
-              <img src={resolveAssetUrl(results.spectrogram_after_url)} alt="Spectrogram after" />
-            </div>
+            <img
+              className="demo-spec-image"
+              src={resolveAssetUrl(specView === 'before' ? results.spectrogram_before_url : results.spectrogram_after_url)}
+              alt={`Spectrogram ${specView}`}
+            />
           </div>
 
           {/* Audio Players */}
@@ -266,11 +291,53 @@ export default function DemoUpload() {
             </div>
           </div>
 
-          {/* Extra info */}
+          {/* Detected Calls Table */}
+          {calls.length > 0 && (
+            <div className="demo-calls-section">
+              <div className="demo-calls-header">
+                <h3>Detected Calls</h3>
+                <span className="demo-calls-badge">{calls.length} call{calls.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="demo-calls-table-wrap">
+                <table className="demo-calls-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Type</th>
+                      <th>Start</th>
+                      <th>End</th>
+                      <th>Duration</th>
+                      <th>Fundamental</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calls.map((call, i) => (
+                      <tr key={i}>
+                        <td className="call-num">{i + 1}</td>
+                        <td><span className="call-type-tag">{call.call_type || 'unknown'}</span></td>
+                        <td className="call-time">{formatTime(call.start_time)}</td>
+                        <td className="call-time">{formatTime(call.end_time)}</td>
+                        <td className="call-time">{call.start_time != null && call.end_time != null ? `${(call.end_time - call.start_time).toFixed(1)}s` : '--'}</td>
+                        <td className="call-freq">{call.estimated_fundamental_hz ? `${call.estimated_fundamental_hz.toFixed(1)} Hz` : '--'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Extra stats */}
           <div className="demo-extra-stats">
-            <span>{results.call_count} call{results.call_count !== 1 ? 's' : ''} detected</span>
             <span>Duration: {results.duration_seconds?.toFixed(1)}s</span>
             <span>Detection: {results.detection_method}</span>
+            <span>No ML models — pure DSP</span>
+          </div>
+
+          {/* Bottom CTA */}
+          <div className="demo-bottom-cta">
+            <button className="btn btn-primary" onClick={reset}>Process another recording</button>
+            <button className="btn btn-outline" onClick={() => navigate('/research')}>Explore full dataset</button>
           </div>
         </div>
       </div>

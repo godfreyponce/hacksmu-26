@@ -185,6 +185,7 @@ def _save_spectrogram(audio: np.ndarray, sr: int, path: str, title: str,
     img = librosa.display.specshow(
         S_db,
         sr=sr,
+        hop_length=n_fft // 4,
         x_axis="time",
         y_axis="hz",
         fmin=0,
