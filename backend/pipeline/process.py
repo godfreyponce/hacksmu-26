@@ -73,10 +73,10 @@ def _estimate_fundamental(audio: np.ndarray, start_sec: float, end_sec: float,
     """
     Estimate the fundamental frequency of a single call window.
 
-    Strategy: take the mean power spectrum of the call segment in the
-    10–200 Hz band and find the peak. Elephant fundamentals live in 10-20 Hz
-    with first harmonics up to ~200 Hz, so this range captures both.
-    Returns 0.0 if the segment is too short to analyze.
+    Elephant infrasonic fundamentals are typically 8-35 Hz. We restrict the
+    search to this narrow band to avoid picking up harmonics (which live in
+    40-200 Hz) or mechanical noise tones. Returns 0.0 if the segment is too
+    short or no clear peak is found.
     """
     s = int(start_sec * sr)
     e = int(end_sec * sr)
@@ -88,13 +88,19 @@ def _estimate_fundamental(audio: np.ndarray, start_sec: float, end_sec: float,
     D = np.abs(librosa.stft(segment, n_fft=n_fft))
     freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
 
-    # Restrict to 10–200 Hz — where elephant fundamentals and first harmonics live
-    band = (freqs >= 10) & (freqs <= 200)
+    # Restrict to 8–35 Hz — true elephant fundamental range only
+    band = (freqs >= 8) & (freqs <= 35)
     if not band.any():
         return 0.0
 
     mean_spectrum = D[band].mean(axis=1)
-    peak_freq = float(freqs[band][np.argmax(mean_spectrum)])
+    peak_idx = np.argmax(mean_spectrum)
+    peak_freq = float(freqs[band][peak_idx])
+
+    # Only report if the peak is meaningfully above the band average
+    if mean_spectrum[peak_idx] < 1.5 * np.mean(mean_spectrum):
+        return 0.0
+
     return round(peak_freq, 2)
 
 
@@ -172,8 +178,8 @@ def _save_spectrogram(audio: np.ndarray, sr: int, path: str, title: str,
     Design choices:
     - Dark background (#0d1117) looks great on the demo UI
     - 'magma' colormap: perceptually uniform, readable at any brightness
-    - y-axis capped at 2000 Hz: shows the full elephant call range without
-      wasting space on empty high-frequency space
+    - y-axis capped at 5000 Hz: shows elephant calls in context with enough
+      surrounding frequency range for judges to see the full picture
     - 150 DPI: crisp on retina displays without being enormous
     """
     fig, ax = plt.subplots(figsize=(12, 5), facecolor="#0d1117")
@@ -189,7 +195,7 @@ def _save_spectrogram(audio: np.ndarray, sr: int, path: str, title: str,
         x_axis="time",
         y_axis="hz",
         fmin=0,
-        fmax=2000,
+        fmax=5000,
         ax=ax,
         cmap="magma",
     )

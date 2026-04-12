@@ -89,7 +89,6 @@ def _call_to_frontend_shape(r: dict) -> dict:
         "call_type": first_call.get("call_type", "rumble"),
         "fundamental_hz": first_call.get("estimated_fundamental_hz"),
         "harmonics": [],
-        "confidence": 0.85 if r.get("snr_improvement_db", 0) > 5 else 0.6,
         "snr_before_db": r.get("snr_before_db"),
         "snr_after_db": r.get("snr_after_db"),
         "snr_improvement_db": r.get("snr_improvement_db"),
@@ -164,9 +163,16 @@ def get_stats():
             by_type[ct] = by_type.get(ct, 0) + 1
             total_calls += 1
 
+    # Compute real stats from data
+    improvements = [r.get("snr_improvement_db", 0) for r in raw if r.get("snr_improvement_db") is not None]
+    avg_improvement = sum(improvements) / len(improvements) if improvements else 0
+    improved_count = sum(1 for v in improvements if v > 0)
+
     return {
         "total_calls": total_calls,
-        "avg_confidence": 0.78,
+        "total_recordings": len(raw),
+        "improved_count": improved_count,
+        "avg_snr_improvement_db": round(avg_improvement, 1),
         "by_call_type": by_type,
     }
 
