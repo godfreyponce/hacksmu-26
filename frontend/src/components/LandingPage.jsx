@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatedHero } from '@/components/ui/animated-hero'
 
 const fadeIn = (progress, start, peak) => Math.max(0, Math.min(1, (progress - start) / (peak - start)))
 const fadeOut = (progress, peak, end) => Math.max(0, Math.min(1, 1 - (progress - peak) / (end - peak)))
@@ -379,8 +380,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <div style={{ height: '20vh', background: 'linear-gradient(rgba(9,11,8,0), #090b08)' }} />
-
       <div className="features" id="science">
         <p className="features-eyebrow">Built for researchers</p>
         <h2>
@@ -407,14 +406,14 @@ export default function LandingPage() {
         </article>
       </div>
 
-      <div className="landing-cta">
-        <h3>
-          Ready to <em>listen differently?</em>
-        </h3>
-        <p>Open the full dashboard for cleaned audio, spectrograms, and call classification.</p>
-        <button className="btn btn-primary" onClick={() => navigate('/research')}>
-          Open dashboard
-        </button>
+      <div style={{
+        borderTop: '1px solid rgba(126, 200, 160, 0.15)',
+        background: 'linear-gradient(180deg, rgba(13,15,11,0) 0%, rgba(126,200,160,0.03) 100%)'
+      }}>
+        <AnimatedHero
+          onExplore={() => navigate('/demo')}
+          onDashboard={() => navigate('/research')}
+        />
       </div>
     </section>
   )

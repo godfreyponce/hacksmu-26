@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const stages = ['hpss', 'clean']
-const stageLabels = { hpss: 'Original (Noisy)', clean: 'Cleaned' }
+const stageLabels = { hpss: 'Original', clean: 'Cleaned' }
 
 function RecordingCard({ call }) {
   const [stage, setStage] = useState('clean')
@@ -36,11 +36,11 @@ function RecordingCard({ call }) {
 
       <div className="demo-audio-row">
         <div>
-          <label>Original</label>
+          <label>Original Recording</label>
           <audio controls src={`${apiUrl}/calls/${call.id}/audio/hpss`} />
         </div>
         <div>
-          <label>Cleaned</label>
+          <label>After Processing</label>
           <audio controls src={`${apiUrl}/calls/${call.id}/audio/clean`} />
         </div>
       </div>
@@ -69,13 +69,13 @@ export default function DemoShowcase() {
   return (
     <section className="demo-showcase" id="transform">
       <div className="demo-header">
-        <p className="demo-eyebrow">LIVE RESULTS</p>
+        <p className="demo-eyebrow">Live Results · Top Recordings</p>
         <h2>Hear the <em>difference</em></h2>
         <p className="demo-sub">
-          Top 5 recordings by noise reduction. Toggle between original and cleaned audio.
+          Our top 5 recordings ranked by noise reduction improvement. Toggle between original field audio and processed output.
         </p>
-        <button className="btn btn-primary" onClick={() => navigate('/demo')}>
-          Run live demo
+        <button className="btn btn-primary" onClick={() => navigate('/demo')} style={{ marginTop: '8px' }}>
+          Try your own recording
         </button>
       </div>
 
