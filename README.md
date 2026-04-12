@@ -73,6 +73,7 @@ Protected (Auth0 M2M bearer token, or `AUTH_DISABLED=true` for local dev):
 cd frontend
 npm install
 cp .env.example .env
+cp ../Address_Me.mp4 public/Address_Me.mp4
 npm run dev
 ```
 
