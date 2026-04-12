@@ -1,0 +1,484 @@
+{
+  "mixes": [
+    {
+      "mix_id": "mix_000_c0_n0_snr-10dB",
+      "mix_path": "scripts/eval/mixes/mix_000_c0_n0_snr-10dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_000_c0_n0_snr-10dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_000_c0_n0_snr-10dB.wav",
+      "target_input_snr_db": -10,
+      "measured_input_snr_db": -10.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_001_c0_n0_snr-5dB",
+      "mix_path": "scripts/eval/mixes/mix_001_c0_n0_snr-5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_001_c0_n0_snr-5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_001_c0_n0_snr-5dB.wav",
+      "target_input_snr_db": -5,
+      "measured_input_snr_db": -5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_002_c0_n0_snr+0dB",
+      "mix_path": "scripts/eval/mixes/mix_002_c0_n0_snr+0dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_002_c0_n0_snr+0dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_002_c0_n0_snr+0dB.wav",
+      "target_input_snr_db": 0,
+      "measured_input_snr_db": 0.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_003_c0_n0_snr+5dB",
+      "mix_path": "scripts/eval/mixes/mix_003_c0_n0_snr+5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_003_c0_n0_snr+5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_003_c0_n0_snr+5dB.wav",
+      "target_input_snr_db": 5,
+      "measured_input_snr_db": 5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_004_c0_n1_snr-10dB",
+      "mix_path": "scripts/eval/mixes/mix_004_c0_n1_snr-10dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_004_c0_n1_snr-10dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_004_c0_n1_snr-10dB.wav",
+      "target_input_snr_db": -10,
+      "measured_input_snr_db": -10.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_005_c0_n1_snr-5dB",
+      "mix_path": "scripts/eval/mixes/mix_005_c0_n1_snr-5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_005_c0_n1_snr-5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_005_c0_n1_snr-5dB.wav",
+      "target_input_snr_db": -5,
+      "measured_input_snr_db": -5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_006_c0_n1_snr+0dB",
+      "mix_path": "scripts/eval/mixes/mix_006_c0_n1_snr+0dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_006_c0_n1_snr+0dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_006_c0_n1_snr+0dB.wav",
+      "target_input_snr_db": 0,
+      "measured_input_snr_db": 0.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_007_c0_n1_snr+5dB",
+      "mix_path": "scripts/eval/mixes/mix_007_c0_n1_snr+5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_007_c0_n1_snr+5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_007_c0_n1_snr+5dB.wav",
+      "target_input_snr_db": 5,
+      "measured_input_snr_db": 5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "04-040920-02_vehicle_1.wav",
+        "call_start": 33.3097,
+        "call_end": 40.75915185
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_008_c1_n0_snr-10dB",
+      "mix_path": "scripts/eval/mixes/mix_008_c1_n0_snr-10dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_008_c1_n0_snr-10dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_008_c1_n0_snr-10dB.wav",
+      "target_input_snr_db": -10,
+      "measured_input_snr_db": -10.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_009_c1_n0_snr-5dB",
+      "mix_path": "scripts/eval/mixes/mix_009_c1_n0_snr-5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_009_c1_n0_snr-5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_009_c1_n0_snr-5dB.wav",
+      "target_input_snr_db": -5,
+      "measured_input_snr_db": -5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_010_c1_n0_snr+0dB",
+      "mix_path": "scripts/eval/mixes/mix_010_c1_n0_snr+0dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_010_c1_n0_snr+0dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_010_c1_n0_snr+0dB.wav",
+      "target_input_snr_db": 0,
+      "measured_input_snr_db": 0.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_011_c1_n0_snr+5dB",
+      "mix_path": "scripts/eval/mixes/mix_011_c1_n0_snr+5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_011_c1_n0_snr+5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_011_c1_n0_snr+5dB.wav",
+      "target_input_snr_db": 5,
+      "measured_input_snr_db": 5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_012_c1_n1_snr-10dB",
+      "mix_path": "scripts/eval/mixes/mix_012_c1_n1_snr-10dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_012_c1_n1_snr-10dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_012_c1_n1_snr-10dB.wav",
+      "target_input_snr_db": -10,
+      "measured_input_snr_db": -10.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_013_c1_n1_snr-5dB",
+      "mix_path": "scripts/eval/mixes/mix_013_c1_n1_snr-5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_013_c1_n1_snr-5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_013_c1_n1_snr-5dB.wav",
+      "target_input_snr_db": -5,
+      "measured_input_snr_db": -5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_014_c1_n1_snr+0dB",
+      "mix_path": "scripts/eval/mixes/mix_014_c1_n1_snr+0dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_014_c1_n1_snr+0dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_014_c1_n1_snr+0dB.wav",
+      "target_input_snr_db": 0,
+      "measured_input_snr_db": 0.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_015_c1_n1_snr+5dB",
+      "mix_path": "scripts/eval/mixes/mix_015_c1_n1_snr+5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_015_c1_n1_snr+5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_015_c1_n1_snr+5dB.wav",
+      "target_input_snr_db": 5,
+      "measured_input_snr_db": 5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_vehicle_noise_3.wav",
+        "call_start": 24.1384,
+        "call_end": 31.00253778
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_016_c2_n0_snr-10dB",
+      "mix_path": "scripts/eval/mixes/mix_016_c2_n0_snr-10dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_016_c2_n0_snr-10dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_016_c2_n0_snr-10dB.wav",
+      "target_input_snr_db": -10,
+      "measured_input_snr_db": -10.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_017_c2_n0_snr-5dB",
+      "mix_path": "scripts/eval/mixes/mix_017_c2_n0_snr-5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_017_c2_n0_snr-5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_017_c2_n0_snr-5dB.wav",
+      "target_input_snr_db": -5,
+      "measured_input_snr_db": -5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_018_c2_n0_snr+0dB",
+      "mix_path": "scripts/eval/mixes/mix_018_c2_n0_snr+0dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_018_c2_n0_snr+0dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_018_c2_n0_snr+0dB.wav",
+      "target_input_snr_db": 0,
+      "measured_input_snr_db": -0.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_019_c2_n0_snr+5dB",
+      "mix_path": "scripts/eval/mixes/mix_019_c2_n0_snr+5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_019_c2_n0_snr+5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_019_c2_n0_snr+5dB.wav",
+      "target_input_snr_db": 5,
+      "measured_input_snr_db": 5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "090224-09_generator_01.wav",
+        "noise_start": 0.0,
+        "noise_end": 45.0
+      }
+    },
+    {
+      "mix_id": "mix_020_c2_n1_snr-10dB",
+      "mix_path": "scripts/eval/mixes/mix_020_c2_n1_snr-10dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_020_c2_n1_snr-10dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_020_c2_n1_snr-10dB.wav",
+      "target_input_snr_db": -10,
+      "measured_input_snr_db": -10.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_021_c2_n1_snr-5dB",
+      "mix_path": "scripts/eval/mixes/mix_021_c2_n1_snr-5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_021_c2_n1_snr-5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_021_c2_n1_snr-5dB.wav",
+      "target_input_snr_db": -5,
+      "measured_input_snr_db": -5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_022_c2_n1_snr+0dB",
+      "mix_path": "scripts/eval/mixes/mix_022_c2_n1_snr+0dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_022_c2_n1_snr+0dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_022_c2_n1_snr+0dB.wav",
+      "target_input_snr_db": 0,
+      "measured_input_snr_db": -0.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    },
+    {
+      "mix_id": "mix_023_c2_n1_snr+5dB",
+      "mix_path": "scripts/eval/mixes/mix_023_c2_n1_snr+5dB.wav",
+      "clean_path": "scripts/eval/mixes/clean/mix_023_c2_n1_snr+5dB.wav",
+      "noise_path": "scripts/eval/mixes/noise/mix_023_c2_n1_snr+5dB.wav",
+      "target_input_snr_db": 5,
+      "measured_input_snr_db": 5.0,
+      "sample_rate": 48000,
+      "duration_sec": 45.0,
+      "clean_source": {
+        "wav": "2000-23_background_and_vehicle_noise_2.wav",
+        "call_start": 46.7113,
+        "call_end": 51.23418148
+      },
+      "noise_source": {
+        "wav": "99-45_vehicle_01.wav",
+        "noise_start": 20.0,
+        "noise_end": 65.0
+      }
+    }
+  ]
+}

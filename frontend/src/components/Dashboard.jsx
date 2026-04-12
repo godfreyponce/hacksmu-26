@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import SpecViewer from './SpecViewer'
 import CallMap from './CallMap'
-import VoiceBar from './VoiceBar'
 import ClipPlayer from './ClipPlayer'
 
 export default function Dashboard() {
   const apiUrl = import.meta.env.VITE_API_URL
   const [calls, setCalls] = useState([])
-  const [stats, setStats] = useState({ total_calls: 0, avg_confidence: 0, by_call_type: {} })
+  const [stats, setStats] = useState({ total_calls: 0, avg_snr_improvement_db: 0, by_call_type: {} })
   const [selectedId, setSelectedId] = useState(null)
 
   useEffect(() => {
@@ -36,9 +35,8 @@ export default function Dashboard() {
       <header className="dash-header">
         <div>
           <h1>EchoMap Research Dashboard</h1>
-          <p>Stage 2/3 denoising, spectrogram analysis, and AI-derived call classification.</p>
+          <p>HPSS + spectral-gate denoising with per-recording metrics and spectrogram comparison.</p>
         </div>
-        <VoiceBar />
       </header>
 
       <section className="stat-grid">
@@ -47,11 +45,11 @@ export default function Dashboard() {
           <p>{stats.total_calls}</p>
         </article>
         <article>
-          <h3>Avg Confidence</h3>
-          <p>{Number(stats.avg_confidence || 0).toFixed(2)}</p>
+          <h3>Avg In-call Energy Ratio Δ (dB)</h3>
+          <p>{Number(stats.avg_snr_improvement_db || 0).toFixed(1)}</p>
         </article>
         <article>
-          <h3>Classification Breakdown</h3>
+          <h3>Call Type Breakdown (from labels)</h3>
           <ul>
             {Object.entries(stats.by_call_type || {}).map(([type, count]) => (
               <li key={type}>

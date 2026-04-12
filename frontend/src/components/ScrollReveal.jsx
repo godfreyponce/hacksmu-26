@@ -6,10 +6,10 @@ export default function ScrollReveal() {
   const progress = useScrollReveal(containerRef)
   const stageLabel =
     progress < 0.33
-      ? 'Raw recording - ambient machinery masks elephant fundamentals'
+      ? 'Raw recording — ambient machinery masks elephant fundamentals'
       : progress < 0.66
-        ? 'Stage 2 spectral gate - residual broadband noise is suppressed'
-        : 'Stage 3 residual cleanup - harmonic lanes become biologically readable'
+        ? 'After HPSS — harmonic bands isolated from broadband noise'
+        : 'After spectral gate + bandpass — elephant-band output'
 
   return (
     <section ref={containerRef} className="transform-section" id="transform">
@@ -17,8 +17,8 @@ export default function ScrollReveal() {
         <div className="sticky-inner">
           <div className="transform-canvas-wrap">
             <div className="transform-label">
-              <span>Spectrogram · file_07.wav · 0-30 seconds</span>
-              <strong className={progress > 0.68 ? 'show' : ''}>Rumble detected · 94% confidence</strong>
+              <span>Spectrogram · illustrative example · 0-30 seconds</span>
+              <strong className={progress > 0.68 ? 'show' : ''}>Harmonic bands emerge from the noise floor</strong>
             </div>
 
             <div className="transform-canvas-border">
@@ -31,8 +31,8 @@ export default function ScrollReveal() {
               />
               <div className={`clean-overlay-text ${progress > 0.72 ? 'show' : ''}`}>
                 <div className="cot-inner">
-                  <p>Fundamental: 14 Hz · Harmonics: 28, 42, 56 Hz</p>
-                  <small>Single caller · contact rumble · 8.2 seconds duration</small>
+                  <p>Low-frequency harmonic bands isolated · broadband hum suppressed</p>
+                  <small>Illustrative example · rumbles live in the 10–200 Hz region</small>
                 </div>
               </div>
             </div>

@@ -1,0 +1,49 @@
+{
+  "filename": "mix_000_c0_n0_snr-10dB.wav",
+  "sample_rate": 48000,
+  "duration_seconds": 45.0,
+  "snr_before_db": 5.79,
+  "snr_after_db": 10.09,
+  "snr_improvement_db": 4.3,
+  "metric_note": "snr_* fields are an in-call/out-of-call energy ratio (proxy), not a true SNR. Real SI-SDR in scripts/eval/.",
+  "detection_method": "auto",
+  "calls_detected": [
+    {
+      "start_time": 0.0,
+      "end_time": 2.219,
+      "call_type": "auto-detected"
+    },
+    {
+      "start_time": 2.987,
+      "end_time": 3.755,
+      "call_type": "auto-detected"
+    },
+    {
+      "start_time": 4.693,
+      "end_time": 5.355,
+      "call_type": "auto-detected"
+    },
+    {
+      "start_time": 8.789,
+      "end_time": 10.411,
+      "call_type": "auto-detected"
+    },
+    {
+      "start_time": 10.923,
+      "end_time": 11.669,
+      "call_type": "auto-detected"
+    },
+    {
+      "start_time": 21.013,
+      "end_time": 23.275,
+      "call_type": "auto-detected"
+    }
+  ],
+  "processing_params": {
+    "n_fft": 4096,
+    "hpss_kernel_size": 17,
+    "bandpass_low_hz": 8.0,
+    "bandpass_high_hz": 1200.0,
+    "oversubtraction_factor": 0.8
+  }
+}

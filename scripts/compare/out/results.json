@@ -1,0 +1,21 @@
+{
+  "input_file": "/Users/geovponce/Desktop/hacksmu-26/data/recordings/04-040920-03_vehicle_noise_1.wav",
+  "sample_rate": 48000,
+  "duration_seconds": 168.98,
+  "bands": [
+    "8-35 Hz (fundamental)",
+    "35-200 Hz (harmonics)",
+    "200-1200 Hz (mid)"
+  ],
+  "ours": {
+    "8-35 Hz (fundamental)": -4.87,
+    "35-200 Hz (harmonics)": 2.2,
+    "200-1200 Hz (mid)": -3.41
+  },
+  "speech_style_proxy": {
+    "8-35 Hz (fundamental)": -44.26,
+    "35-200 Hz (harmonics)": 2.41,
+    "200-1200 Hz (mid)": 3.78
+  },
+  "notes": "speech_style_proxy is a SIMULATION, not a real ML model. It applies a 100 Hz 4th-order Butterworth high-pass (the effective low-frequency floor of RNNoise-family speech denoisers) followed by aggressive spectral subtraction. Energy retained is 10*log10(E_clean_band / E_original_band)."
+}

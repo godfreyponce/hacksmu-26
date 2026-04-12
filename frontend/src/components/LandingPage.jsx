@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatedHero } from '@/components/ui/animated-hero'
 
 const fadeIn = (progress, start, peak) => Math.max(0, Math.min(1, (progress - start) / (peak - start)))
 const fadeOut = (progress, peak, end) => Math.max(0, Math.min(1, 1 - (progress - peak) / (end - peak)))
@@ -387,34 +388,35 @@ export default function LandingPage() {
           From <em>noisy files</em> to research insights
         </h2>
         <p className="features-sub">
-          EchoMap processes every clip through spectral gating, classifies harmonic structure with
-          Gemini Vision, and maps behavioral patterns across your dataset.
+          EchoMap processes every clip through HPSS + per-file spectral subtraction + an 8–1200 Hz
+          bandpass, producing cleaned audio, before/after spectrograms, and per-recording metrics
+          you can actually inspect.
         </p>
       </div>
 
       <div className="pipeline-grid" id="partners">
         <article>
-          <h3>Spectral noise removal</h3>
-          <p>Targets the residual floor after HPSS while preserving ultra-low fundamentals.</p>
+          <h3>HPSS structural separation</h3>
+          <p>Exploits that rumbles are harmonic horizontal bands while mechanical noise is broadband — no ML model, fully deterministic.</p>
         </article>
         <article>
-          <h3>Gemini Vision classify</h3>
-          <p>Reads spectrogram structure to infer call type, harmonics, and caller count.</p>
+          <h3>Per-file spectral subtraction</h3>
+          <p>Builds a noise fingerprint from each recording's own silent gaps, preserving ultra-low fundamentals down to 8 Hz.</p>
         </article>
         <article>
-          <h3>Interactive call map</h3>
-          <p>Explore behavior patterns with stage toggles, map distribution, and voice query.</p>
+          <h3>Natural-language query</h3>
+          <p>Ask questions in English over the processed-recordings metrics JSON (Gemini-backed chat, no vision classifier).</p>
         </article>
       </div>
 
-      <div className="landing-cta">
-        <h3>
-          Ready to <em>listen differently?</em>
-        </h3>
-        <p>Open the full dashboard for cleaned audio, spectrograms, and call classification.</p>
-        <button className="btn btn-primary" onClick={() => navigate('/research')}>
-          Open dashboard
-        </button>
+      <div style={{
+        borderTop: '1px solid rgba(126, 200, 160, 0.15)',
+        background: 'linear-gradient(180deg, rgba(13,15,11,0) 0%, rgba(126,200,160,0.03) 100%)'
+      }}>
+        <AnimatedHero
+          onExplore={() => navigate('/demo')}
+          onDashboard={() => navigate('/research')}
+        />
       </div>
     </section>
   )

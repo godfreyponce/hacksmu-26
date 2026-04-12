@@ -23,9 +23,10 @@ export default function SpecViewer({ call }) {
       </div>
       <img src={imageSrc} alt={`Spectrogram ${call.call_id_csv} (${stage})`} />
       <div className="call-metadata">
-        <p>Type: {call.call_type || 'unknown'}</p>
-        <p>Fundamental: {call.fundamental_hz || 'n/a'} Hz</p>
-        <p>Harmonics: {(call.harmonics || []).join(', ') || 'n/a'}</p>
+        <p>Type: {call.call_type || 'unknown'} <span style={{ opacity: 0.6, fontSize: '0.85em' }}>(from CSV label)</span></p>
+        {call.snr_improvement_db != null && (
+          <p>In-call energy ratio Δ: {Number(call.snr_improvement_db).toFixed(1)} dB</p>
+        )}
       </div>
     </div>
   )

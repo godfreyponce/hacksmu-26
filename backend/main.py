@@ -32,16 +32,18 @@ from pydantic import BaseModel
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "output")
 SUMMARY_PATH = os.path.join(OUTPUT_DIR, "summary.json")
 
-# Map frontend "stage" names to our pipeline output filenames
+# Map frontend "stage" names to our pipeline output filenames.
+# The pipeline now saves REAL intermediate audio + spectrograms for every stage,
+# so the 3-way stage toggle in the UI is no longer cosmetic.
 STAGE_AUDIO = {
-    "hpss": "original.wav",    # stage 1: pre-processing (original noisy)
-    "gated": "original.wav",   # stage 2: we don't save intermediate, serve original
-    "clean": "cleaned.wav",    # stage 3: final cleaned output
+    "hpss":  "harmonic.wav",   # after HPSS (harmonic component), pre-gate
+    "gated": "gated.wav",      # after spectral subtraction, pre-bandpass
+    "clean": "cleaned.wav",    # final (bandpassed) output
 }
 STAGE_IMAGE = {
-    "hpss": "spectrogram_before.png",
-    "gated": "spectrogram_before.png",
-    "clean": "spectrogram_after.png",
+    "hpss":  "spectrogram_harmonic.png",
+    "gated": "spectrogram_gated.png",
+    "clean": "spectrogram_cleaned.png",
 }
 
 # ---------------------------------------------------------------------------
@@ -87,11 +89,12 @@ def _call_to_frontend_shape(r: dict) -> dict:
         "id": stem,
         "call_id_csv": r["filename"],
         "call_type": first_call.get("call_type", "rumble"),
-        "fundamental_hz": first_call.get("estimated_fundamental_hz"),
-        "harmonics": [],
+        # snr_* keys are actually an in-call/out-of-call energy ratio (proxy for cleanup),
+        # NOT true SNR. Frontend labels them honestly. See r["metric_note"].
         "snr_before_db": r.get("snr_before_db"),
         "snr_after_db": r.get("snr_after_db"),
         "snr_improvement_db": r.get("snr_improvement_db"),
+        "metric_note": r.get("metric_note"),
         "duration_seconds": r.get("duration_seconds"),
         "detection_method": r.get("detection_method", "labeled"),
         "call_count": len(calls_detected),

@@ -1,80 +1,91 @@
-# EchoMap - Elephant Vocalization Analysis Platform
+# EchoMap — Elephant Vocalization Denoising Platform
 
-EchoMap is a full-stack research platform that starts after HPSS and implements:
+**HackSMU VII / iMasons · ElephantVoices challenge:** remove overlapping mechanical noise (airplanes, cars, generators) from elephant field recordings *without* distorting the elephant calls.
 
-- Stage 2 spectral gating (`backend/pipeline/denoiser.py`)
-- Stage 3 residual cleanup (`backend/pipeline/denoiser.py`)
-- Spectrogram generation (`backend/pipeline/spectrogram.py`)
-- Gemini vision classification (`backend/pipeline/classifier.py`)
-- SQLite persistence (`backend/db/schema.sql`, `backend/db/database.py`)
-- FastAPI API (`backend/api/main.py`)
-- React research dashboard (`frontend/src`)
+EchoMap is a deterministic, ML-free DSP pipeline that exploits a structural difference rather than a frequency one — elephant rumbles are sustained harmonic bands; mechanical noise is broadband and stationary.
 
-## Input Contract
+## Pipeline (`backend/pipeline/process.py`)
 
-For each call, teammate A provides:
+1. **Load** at native sample rate (48 kHz) — `sr=None` preserves 10–20 Hz infrasound.
+2. **HPSS** (Harmonic-Percussive Source Separation) — median filters isolate the harmonic component.
+3. **Noise fingerprint** — per-recording, built from the HPSS-harmonic signal's silent gaps so it subtracts cleanly (this was a bug in earlier versions; see `process.py` docstring).
+4. **Spectral subtraction** on the harmonic signal (`step4a`).
+5. **8–1200 Hz Butterworth bandpass** (`step4b`) — preserves infrasound down to 8 Hz.
+6. **In-call energy ratio** — a *proxy* metric (not a true SNR; see evaluation below for real ground truth).
 
-- `data/hpss/{call_id}_hpss.wav`
-- metadata JSON fields: `call_id`, `start_sec`, `end_sec`
+Every stage writes real audio + spectrograms (`harmonic.wav`, `gated.wav`, `cleaned.wav`), so the UI stage-toggle shows genuine intermediates.
 
-## Backend Setup
+## Evaluation (the honest bit)
+
+The in-call/out-of-call energy ratio in the UI is a cleanup proxy and can be misleading on its own. For real ground-truth evaluation we built two off-line harnesses:
+
+### `scripts/eval/` — SI-SDR on synthetic clean+noise mixes
+
+5 labeled elephant rumbles × 2 noise types (generator, vehicle) × 4 input SNRs (−10, −5, 0, +5 dB) = 24 mixes. We measure scale-invariant SDR improvement against the clean reference.
+
+| Input SNR | SI-SDR Δ (dB) | Call-band cosine |
+|---|---|---|
+| −10 dB (noise-dominated) | **+1.9 ± 4.0** | 0.55 |
+| −5 dB (heavy noise) | **+2.1 ± 2.5** | 0.77 |
+| 0 dB | −0.0 ± 1.6 | 0.91 |
+| +5 dB (already clean-ish) | −3.8 ± 1.4 | 0.96 |
+
+**Finding:** the pipeline is a low-SNR rescue tool. It improves the recordings that are currently unusable, but will damage already-clean audio — do not apply it blanket.
+
+Reproduce: `python scripts/eval/build_mixes.py && python scripts/eval/run_eval.py`
+
+### `scripts/compare/` — infrasound preservation vs. speech-trained denoisers
+
+Generic speech denoisers (RNNoise / Meta Denoiser / Adobe Podcast) high-pass below ~80 Hz because speech has nothing useful there — which would obliterate every elephant fundamental. We simulate that behavior with a 100 Hz Butterworth HPF + aggressive spectral gate (clearly labeled as a simulation).
+
+| Band | Ours | Speech-style proxy |
+|---|---|---|
+| **8–35 Hz (elephant fundamental)** | **−4.9 dB** (preserved) | **−44.3 dB** (destroyed) |
+| 35–200 Hz (harmonics) | +2.2 dB | +2.4 dB |
+| 200–1200 Hz (mid) | −3.4 dB | +3.8 dB |
+
+**Finding:** ~39 dB advantage in the elephant fundamental band. This is why classical DSP beats a generic ML denoiser for this use case.
+
+Reproduce: `python scripts/compare/infrasound_comparison.py`
+
+## Backend
 
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
+cd backend && python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
 cd ..
-uvicorn backend.api.main:app --reload
+uvicorn backend.main:app --reload --port 8000
 ```
 
-### Batch Processing
-
-Use a metadata JSON array:
-
-```json
-[
-	{ "call_id": "call_001", "start_sec": 2.1, "end_sec": 8.7 }
-]
-```
-
-Run:
+Batch process the dataset:
 
 ```bash
-python3 -m backend.pipeline.run_from_metadata metadata.json
+python -m backend.pipeline.process batch data/recordings data/calls.csv output
 ```
 
-Outputs are written to:
+### API
 
-- `data/gated/`
-- `data/cleaned/`
-- `data/spectrograms/`
-- `data/echomap.db`
+- `GET /calls` — all processed recordings
+- `GET /calls/{id}` — single recording detail
+- `GET /calls/{id}/audio/{stage}` — `hpss | gated | clean` (real intermediate files)
+- `GET /calls/{id}/spectrogram/{stage}` — same stages
+- `GET /stats` — aggregate metrics
+- `POST /process` — upload a `.wav`, run pipeline, return results
+- `POST /query` — natural-language query over processed-recordings metrics (Gemini-backed chat; no vision, no classification)
 
-## API Contract
-
-Public:
-
-- `GET /calls`
-- `GET /calls/{id}`
-- `GET /calls/{id}/audio/{stage}` (`hpss|gated|clean`)
-- `GET /calls/{id}/spectrogram/{stage}`
-- `GET /stats`
-
-Protected (Auth0 M2M bearer token, or `AUTH_DISABLED=true` for local dev):
-
-- `POST /query`
-- `POST /report`
-
-## Frontend Setup
+## Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env
-cp ../Address_Me.mp4 public/Address_Me.mp4
 npm run dev
 ```
 
-The frontend expects `VITE_API_URL` to point to FastAPI (default `http://localhost:8000`).
+Set `VITE_API_URL=http://localhost:8000` in `frontend/.env`.
+
+## What this is *not*
+
+- Not an ML model. No training data, no GPU, no weights.
+- Not a call classifier. `call_type` is passthrough from the labeled CSV column.
+- Not a universal denoiser. It's tuned for elephant rumbles in mechanical-noise-dominated recordings; it will hurt already-clean audio (see SI-SDR table).
+- Not a fundamental-frequency estimator. At n\_fft=4096 / sr=48 kHz, the 8–35 Hz search range has only ~2 FFT bins — previous versions produced a meaningless 2-valued output; this field has been removed.

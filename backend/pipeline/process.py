@@ -68,42 +68,6 @@ def _compute_snr(audio: np.ndarray, calls: list, sr: int) -> float:
     return float(20 * np.log10(signal_rms / (noise_rms + 1e-10)))
 
 
-def _estimate_fundamental(audio: np.ndarray, start_sec: float, end_sec: float,
-                           sr: int, n_fft: int = 4096) -> float:
-    """
-    Estimate the fundamental frequency of a single call window.
-
-    Elephant infrasonic fundamentals are typically 8-35 Hz. We restrict the
-    search to this narrow band to avoid picking up harmonics (which live in
-    40-200 Hz) or mechanical noise tones. Returns 0.0 if the segment is too
-    short or no clear peak is found.
-    """
-    s = int(start_sec * sr)
-    e = int(end_sec * sr)
-    segment = audio[s:e]
-
-    if len(segment) < n_fft:
-        return 0.0
-
-    D = np.abs(librosa.stft(segment, n_fft=n_fft))
-    freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
-
-    # Restrict to 8–35 Hz — true elephant fundamental range only
-    band = (freqs >= 8) & (freqs <= 35)
-    if not band.any():
-        return 0.0
-
-    mean_spectrum = D[band].mean(axis=1)
-    peak_idx = np.argmax(mean_spectrum)
-    peak_freq = float(freqs[band][peak_idx])
-
-    # Only report if the peak is meaningfully above the band average
-    if mean_spectrum[peak_idx] < 1.5 * np.mean(mean_spectrum):
-        return 0.0
-
-    return round(peak_freq, 2)
-
-
 def _auto_detect_calls(H_mag: np.ndarray, sr: int, n_fft: int = 4096,
                         min_duration: float = 0.5, merge_gap: float = 0.5) -> list:
     """
@@ -255,39 +219,36 @@ def step1_load(wav_path: str, csv_path: str):
     return y, sr, calls, call_types, basename
 
 
-def step2_noise_profile(y: np.ndarray, sr: int, calls: list, n_fft: int = 4096) -> np.ndarray:
+def step2_noise_profile(source: np.ndarray, sr: int, calls: list, n_fft: int = 4096,
+                         label: str = "harmonic") -> np.ndarray:
     """
-    Step 2: Build a per-frequency noise fingerprint from non-call segments.
+    Step 2: Build a per-frequency noise fingerprint from non-call segments
+    of the HPSS harmonic signal.
 
-    We extract only the audio samples that fall OUTSIDE labeled call windows,
-    compute their STFT, and average the magnitude spectrum across time.
-    The resulting vector (one value per frequency bin) tells us the typical
-    noise floor at each frequency for this specific recording.
-
-    This per-recording fingerprint accounts for the fact that a generator in
-    one recording will have a different spectral shape than road noise in another.
+    IMPORTANT: the `source` we profile must be on the SAME scale as the signal
+    we later subtract from. Previously we profiled the raw `y` but subtracted
+    from the STFT of `y_harmonic` (HPSS output), which is already magnitude-
+    reduced — that mismatch caused the oversubtraction factor to behave
+    unpredictably. We now profile the harmonic signal directly so the
+    subtraction is self-consistent.
     """
-    print("  [2/6] Building noise profile from silence gaps ...")
+    print(f"  [2/6] Building noise profile from {label} non-call segments ...")
 
     if not calls:
-        # No labeled calls — can't identify noise-only segments.
-        # Use percentile-based estimation: the 25th percentile of spectral energy
-        # across time gives the noise floor. This assumes noise is present in at
-        # least 75% of frames (true for recordings dominated by mechanical noise).
+        # No labeled calls — use percentile-based estimation: the 25th percentile
+        # of spectral magnitude across time approximates the noise floor.
         print("     No labeled calls — using percentile-based noise estimation.")
-        D_full = np.abs(librosa.stft(y, n_fft=n_fft))
+        D_full = np.abs(librosa.stft(source, n_fft=n_fft))
         noise_profile = np.percentile(D_full, 25, axis=1, keepdims=True)
     else:
-        mask = _build_call_mask(len(y), calls, sr)
-        noise_samples = y[~mask]
+        mask = _build_call_mask(len(source), calls, sr)
+        noise_samples = source[~mask]
 
         if len(noise_samples) < n_fft:
-            # Edge case: calls span almost the entire file — use the whole signal
             print("     Warning: almost no non-call audio. Using full signal for noise profile.")
-            noise_samples = y
+            noise_samples = source
 
         D_noise = librosa.stft(noise_samples, n_fft=n_fft)
-        # keepdims=True keeps shape (n_freqs, 1) so we can broadcast against (n_freqs, n_frames)
         noise_profile = np.mean(np.abs(D_noise), axis=1, keepdims=True)
     print(f"     Noise profile shape: {noise_profile.shape} | "
           f"Mean noise floor: {float(noise_profile.mean()):.4f}")
@@ -335,107 +296,128 @@ def step3_hpss(y: np.ndarray, sr: int, n_fft: int = 4096,
     return y_harmonic, D_phase, H_mag
 
 
-def step4_spectral_gate_and_bandpass(y_harmonic: np.ndarray, sr: int,
-                                      noise_profile: np.ndarray, D_phase: np.ndarray,
-                                      n_fft: int = 4096,
-                                      oversubtraction: float = 1.5,
-                                      bandpass_low: float = 8.0,
-                                      bandpass_high: float = 1200.0) -> np.ndarray:
+def step4a_spectral_gate(y_harmonic: np.ndarray, sr: int,
+                          noise_profile: np.ndarray,
+                          n_fft: int = 4096,
+                          oversubtraction: float = 1.5,
+                          residual_floor: float = 0.1) -> np.ndarray:
     """
-    Step 4: Spectral Gating + Bandpass Filter.
+    Step 4a: Wiener-style spectral gain mask (replaces hard subtraction).
 
-    HPSS alone might leave residual tonal noise (a generator hum is technically
-    harmonic — it has steady tones at its fundamental and harmonics, so HPSS
-    won't fully remove it). This step does a surgical cleanup:
+    Previously we used hard spectral subtraction: D_gated = max(D - alpha*N, 0).
+    That works on high-SNR recordings but annihilates weak signal at low SNR
+    — failure mode observed on 99-37_airplane_and_vehicle_01.wav where the
+    elephant rumble was softer than the noise floor and got zeroed out.
 
-    1. SPECTRAL SUBTRACTION: For each frequency bin, subtract the expected noise
-       floor (from step 2) scaled by `oversubtraction`. The scale > 1.0 means we
-       remove slightly more than the measured noise floor, which handles noise
-       variance. np.maximum(..., 0) prevents negative magnitudes (Wiener-style).
+    The fix: a bounded, power-domain Wiener gain with a residual floor.
 
-    2. BANDPASS FILTER: Hard cut anything outside 8–1200 Hz using a 4th-order
-       Butterworth filter. This removes:
-       - Sub-8 Hz: seismic rumble, mic handling noise
-       - Above 1200 Hz: birds, insects, wind — not elephant calls
-       (Note: 8 Hz not 0 Hz as lower bound because the Butterworth filter
-        needs a non-zero lower cutoff for a bandpass design)
+        gain(f,t) = max( P_signal / (P_signal + (alpha·N)^2 ), residual_floor )
+        P_signal  = max( D^2 - (alpha·N)^2, 0 )   (signal power estimate)
 
-    oversubtraction tuning guide:
-    - 1.0: subtract exactly the measured noise floor (conservative)
-    - 1.5: subtract 150% of measured floor (default — handles noise variance)
-    - 2.0: very aggressive, may cause 'musical noise' artifacts if overdone
+    Properties:
+    - Gain is in [residual_floor, 1], never negative, never exploding.
+    - When D >> N, gain → 1 (signal passes through untouched).
+    - When D ~ alpha·N, gain → 0.5 (attenuated but not annihilated).
+    - When D << N, gain → residual_floor (weak call survives at reduced level
+      instead of being deleted — judge can still hear it).
+
+    residual_floor=0.1 means we always keep at least 10% of the harmonic
+    magnitude. This is audibly the difference between "muffled but audible
+    rumble in a noisy cleanup" and "dead silence where the call used to be."
     """
-    print(f"  [4/6] Spectral gating (oversubtraction={oversubtraction}) + "
-          f"bandpass {bandpass_low}–{bandpass_high} Hz ...")
+    print(f"  [4a/6] Wiener gain mask (alpha={oversubtraction}, "
+          f"floor={residual_floor}) ...")
 
     D_h = librosa.stft(y_harmonic, n_fft=n_fft)
     D_h_mag = np.abs(D_h)
     D_h_phase = np.angle(D_h)
 
-    # Broadcast noise profile (n_freqs, 1) across all time frames
-    noise_floor = np.tile(noise_profile, (1, D_h_mag.shape[1]))
-    D_gated = np.maximum(D_h_mag - noise_floor * oversubtraction, 0)
+    N = np.tile(noise_profile, (1, D_h_mag.shape[1])) * oversubtraction
+    # Power-domain Wiener-style gain
+    sig_power = np.maximum(D_h_mag ** 2 - N ** 2, 0.0)
+    gain = sig_power / (sig_power + N ** 2 + 1e-12)
+    gain = np.maximum(gain, residual_floor)
 
-    # Reconstruct audio from gated magnitude + harmonic phase
-    D_cleaned = D_gated * np.exp(1j * D_h_phase)
-    y_cleaned = librosa.istft(D_cleaned, length=len(y_harmonic))
+    D_gated_mag = D_h_mag * gain
+    D_gated_complex = D_gated_mag * np.exp(1j * D_h_phase)
+    y_gated = librosa.istft(D_gated_complex, length=len(y_harmonic))
+    return y_gated
 
-    # Bandpass filter: 4th-order Butterworth in second-order sections (sosfilt)
-    # sosfilt is numerically more stable than lfilter for high-order filters
+
+def step4b_bandpass(y_gated: np.ndarray, sr: int,
+                     bandpass_low: float = 8.0,
+                     bandpass_high: float = 1200.0) -> np.ndarray:
+    """
+    Step 4b: 4th-order Butterworth bandpass — 8 Hz lower cutoff preserves
+    elephant infrasound (fundamentals at 10-20 Hz) while cutting DC drift and
+    mic-handling rumble. Upper cutoff 1200 Hz covers rumble harmonics without
+    admitting birds/insects/wind.
+    """
+    print(f"  [4b/6] Bandpass {bandpass_low}–{bandpass_high} Hz ...")
     sos = butter(4, [bandpass_low, bandpass_high], btype="bandpass", fs=sr, output="sos")
-    y_cleaned = sosfilt(sos, y_cleaned)
+    y_cleaned = sosfilt(sos, y_gated)
 
-    # Normalize to avoid clipping
     peak = np.max(np.abs(y_cleaned))
     if peak > 0:
         y_cleaned = y_cleaned / peak * 0.95
-
     print(f"     Done. Output peak amplitude: {float(np.max(np.abs(y_cleaned))):.3f}")
     return y_cleaned
 
 
-def step5_spectrograms(y: np.ndarray, y_cleaned: np.ndarray, sr: int,
-                        output_dir: str, n_fft: int = 4096) -> tuple:
+def step5_spectrograms(y: np.ndarray, y_harmonic: np.ndarray, y_gated: np.ndarray,
+                        y_cleaned: np.ndarray, sr: int,
+                        output_dir: str, n_fft: int = 4096) -> dict:
     """
-    Step 5: Generate presentation-quality spectrogram PNGs.
-
-    Both before and after spectrograms use identical settings so the comparison
-    is visually meaningful — the only difference is the signal content.
+    Step 5: Generate presentation-quality spectrograms for every pipeline stage
+    so the 3-stage toggle in the UI shows real intermediate output (not fakes).
+    All spectrograms share identical axes for a fair visual comparison.
     """
-    print("  [5/6] Generating spectrograms ...")
-    before_path = os.path.join(output_dir, "spectrogram_before.png")
-    after_path = os.path.join(output_dir, "spectrogram_after.png")
+    print("  [5/6] Generating spectrograms (original / harmonic / gated / cleaned) ...")
+    paths = {
+        "original": os.path.join(output_dir, "spectrogram_original.png"),
+        "harmonic": os.path.join(output_dir, "spectrogram_harmonic.png"),
+        "gated":    os.path.join(output_dir, "spectrogram_gated.png"),
+        "cleaned":  os.path.join(output_dir, "spectrogram_cleaned.png"),
+    }
+    _save_spectrogram(y,          sr, paths["original"], "Original Recording",                n_fft=n_fft)
+    _save_spectrogram(y_harmonic, sr, paths["harmonic"], "After HPSS (harmonic component)",   n_fft=n_fft)
+    _save_spectrogram(y_gated,    sr, paths["gated"],    "After Spectral Gate (pre-bandpass)", n_fft=n_fft)
+    _save_spectrogram(y_cleaned,  sr, paths["cleaned"],  "Cleaned (HPSS + Gate + Bandpass)",  n_fft=n_fft)
 
-    _save_spectrogram(y, sr, before_path, "Original Recording", n_fft=n_fft)
-    _save_spectrogram(y_cleaned, sr, after_path, "Cleaned Recording (HPSS + Spectral Gate)", n_fft=n_fft)
+    # Back-compat aliases for existing API consumers that expect *_before / *_after names.
+    shutil.copyfile(paths["original"], os.path.join(output_dir, "spectrogram_before.png"))
+    shutil.copyfile(paths["cleaned"],  os.path.join(output_dir, "spectrogram_after.png"))
 
-    print(f"     Saved: {before_path}")
-    print(f"     Saved: {after_path}")
-    return before_path, after_path
+    for label, p in paths.items():
+        print(f"     Saved [{label}]: {p}")
+    return paths
 
 
-def step6_snr_validation(y: np.ndarray, y_cleaned: np.ndarray,
-                          sr: int, calls: list, call_types: list, basename: str,
-                          n_fft: int = 4096) -> tuple:
+def step6_energy_ratio(y: np.ndarray, y_cleaned: np.ndarray,
+                        sr: int, calls: list, call_types: list, basename: str,
+                        n_fft: int = 4096) -> tuple:
     """
-    Step 6: Measure SNR before/after and compute per-call metrics.
+    Step 6: In-call vs out-of-call energy ratio (proxy for cleanup).
 
-    SNR = 20 * log10(RMS_during_calls / RMS_during_non_calls)
+    This is NOT a true SNR — no clean reference exists for field recordings,
+    so we can't compute SDR/SI-SDR here. We compute:
+        ratio_dB = 20 * log10(RMS_during_calls / RMS_during_non_calls)
+    and report before/after values. A rising ratio can mean a cleaner
+    background *or* more aggressive attenuation of non-call audio.
+    The synthetic-mix evaluation harness in scripts/eval/ measures
+    true SI-SDR against a clean reference — that is the scientific metric;
+    this one is just a quick sanity indicator.
 
-    A positive SNR_improvement means the cleaned audio has a higher
-    signal-to-noise ratio — elephant calls are louder relative to the
-    background noise after processing.
-
-    Per-call metrics include the estimated fundamental frequency, which
-    is useful for the research dashboard to show which calls were best
-    preserved.
+    We deliberately do not return any "fundamental frequency" field:
+    at n_fft=4096 and sr=48 kHz, FFT bin spacing is ~11.7 Hz, which leaves
+    only ~2 bins in the 8-35 Hz elephant-fundamental search range — the
+    estimate would quantize to one of two values and be scientifically
+    meaningless. Use scripts/eval/ for real pitch analysis if needed.
     """
-    print("  [6/6] Computing SNR metrics ...")
+    print("  [6/6] Computing in-call energy ratio (proxy) ...")
 
     if not calls:
-        # No labeled calls — can't compute meaningful call-vs-noise SNR.
-        # Report 0.0 instead of nonsensical -160 dB values.
-        print("     No labeled calls — SNR metrics not applicable.")
+        print("     No labeled calls — ratio not applicable.")
         snr_before = 0.0
         snr_after = 0.0
         improvement = 0.0
@@ -445,18 +427,16 @@ def step6_snr_validation(y: np.ndarray, y_cleaned: np.ndarray,
         snr_after = _compute_snr(y_cleaned, calls, sr)
         improvement = snr_after - snr_before
 
-        print(f"     SNR before: {snr_before:.1f} dB")
-        print(f"     SNR after:  {snr_after:.1f} dB")
-        print(f"     Improvement: {improvement:+.1f} dB")
+        print(f"     Ratio before: {snr_before:.1f} dB")
+        print(f"     Ratio after:  {snr_after:.1f} dB")
+        print(f"     Improvement: {improvement:+.1f} dB (proxy — not true SNR)")
 
         calls_detected = []
         for i, (start, end) in enumerate(calls):
-            fundamental = _estimate_fundamental(y_cleaned, start, end, sr, n_fft=n_fft)
             calls_detected.append({
                 "start_time": round(start, 3),
                 "end_time": round(end, 3),
                 "call_type": call_types[i] if i < len(call_types) else "unknown",
-                "estimated_fundamental_hz": fundamental,
             })
 
     return snr_before, snr_after, improvement, calls_detected
@@ -471,7 +451,8 @@ def process_recording(wav_path: str, csv_path: str, output_dir: str,
                        hpss_kernel_size: int = 31,
                        bandpass_low: float = 8.0,
                        bandpass_high: float = 1200.0,
-                       oversubtraction: float = 1.5) -> dict:
+                       oversubtraction: float = 1.5,
+                       residual_floor: float = 0.1) -> dict:
     """
     Full elephant audio processing pipeline.
 
@@ -511,26 +492,39 @@ def process_recording(wav_path: str, csv_path: str, output_dir: str,
     # Step 1: Load
     y, sr, calls, call_types, basename = step1_load(wav_path, csv_path)
 
-    # Step 2: Noise profile (from non-call gaps)
-    noise_profile = step2_noise_profile(y, sr, calls, n_fft=n_fft)
-
-    # Adaptive parameter tuning for difficult recordings:
-    # - No labeled calls: use gentle params since we can't precisely identify signal
-    # - Low SNR (noise louder than signal): reduce aggressiveness to preserve calls
+    # Adaptive parameter tuning for difficult recordings (must happen BEFORE HPSS
+    # since kernel_size is an HPSS parameter):
     if not calls:
         hpss_kernel_size = min(hpss_kernel_size, 17)
         oversubtraction = min(oversubtraction, 0.8)
-        print(f"     Adaptive: no calls → kernel_size={hpss_kernel_size}, "
+        print(f"  Adaptive: no calls → kernel_size={hpss_kernel_size}, "
               f"oversubtraction={oversubtraction}")
     else:
         rough_snr = _compute_snr(y, calls, sr)
-        if rough_snr < 0:
+        if rough_snr < -5:
+            # Extreme low SNR: noise strongly dominates the call. Be VERY gentle
+            # with the gate and raise the residual floor so the rumble is not
+            # annihilated (e.g. 99-37_airplane_and_vehicle_01.wav — both airplane
+            # and vehicle noise are themselves harmonic, so HPSS can't fully
+            # separate them).
+            hpss_kernel_size = min(hpss_kernel_size, 17)
+            oversubtraction = min(oversubtraction, 0.7)
+            residual_floor = max(residual_floor, 0.3)
+            print(f"  Adaptive: extreme low ratio ({rough_snr:.1f} dB) → "
+                  f"kernel={hpss_kernel_size}, oversub={oversubtraction}, "
+                  f"floor={residual_floor} (preserve weak call)")
+        elif rough_snr < 0:
             hpss_kernel_size = min(hpss_kernel_size, 21)
             oversubtraction = min(oversubtraction, 1.0)
-            print(f"     Adaptive: low SNR ({rough_snr:.1f} dB) → kernel_size={hpss_kernel_size}, "
-                  f"oversubtraction={oversubtraction}")
+            residual_floor = max(residual_floor, 0.15)
+            print(f"  Adaptive: low in-call/out ratio ({rough_snr:.1f} dB) → "
+                  f"kernel_size={hpss_kernel_size}, oversubtraction={oversubtraction}, "
+                  f"floor={residual_floor}")
 
-    # Step 3: HPSS — separate harmonic (calls) from percussive (noise)
+    # Step 3 (now before step 2): HPSS — separate harmonic (calls) from percussive (noise).
+    # We run HPSS FIRST so the noise profile can be built from the harmonic signal's
+    # silent gaps — same scale as what we'll subtract from in step 4a. This fixes
+    # the magnitude-mismatch bug in the previous version.
     y_harmonic, D_phase, H_mag = step3_hpss(y, sr, n_fft=n_fft, kernel_size=hpss_kernel_size)
 
     # Auto-detect calls for unlabeled recordings using harmonic energy peaks
@@ -543,35 +537,45 @@ def process_recording(wav_path: str, csv_path: str, output_dir: str,
             detection_method = "auto"
             print(f"     Auto-detected {len(calls)} probable call regions")
 
-    # Step 4: Spectral gating + bandpass filter
-    y_cleaned = step4_spectral_gate_and_bandpass(
-        y_harmonic, sr, noise_profile, D_phase,
-        n_fft=n_fft,
-        oversubtraction=oversubtraction,
-        bandpass_low=bandpass_low,
-        bandpass_high=bandpass_high,
-    )
+    # Step 2: Noise profile — built from the HARMONIC signal's non-call segments so
+    # it's on the same magnitude scale as the STFT we subtract from in step 4a.
+    noise_profile = step2_noise_profile(y_harmonic, sr, calls, n_fft=n_fft, label="harmonic")
 
-    # Step 5: Spectrograms
-    step5_spectrograms(y, y_cleaned, sr, output_dir, n_fft=n_fft)
+    # Step 4a: Spectral gating on the harmonic signal
+    y_gated = step4a_spectral_gate(y_harmonic, sr, noise_profile,
+                                   n_fft=n_fft, oversubtraction=oversubtraction,
+                                   residual_floor=residual_floor)
 
-    # Step 6: SNR metrics
-    snr_before, snr_after, improvement, calls_detected = step6_snr_validation(
+    # Step 4b: Bandpass filter to produce the final cleaned output
+    y_cleaned = step4b_bandpass(y_gated, sr,
+                                bandpass_low=bandpass_low, bandpass_high=bandpass_high)
+
+    # Step 5: Spectrograms for every stage (real intermediates, not fakes)
+    step5_spectrograms(y, y_harmonic, y_gated, y_cleaned, sr, output_dir, n_fft=n_fft)
+
+    # Step 6: In-call energy ratio (proxy metric)
+    snr_before, snr_after, improvement, calls_detected = step6_energy_ratio(
         y, y_cleaned, sr, calls, call_types, basename, n_fft=n_fft
     )
 
-    # Write outputs
+    # Write all stage outputs so the frontend stage toggle can serve real audio
     print("  Writing output files ...")
     shutil.copy(wav_path, os.path.join(output_dir, "original.wav"))
-    sf.write(os.path.join(output_dir, "cleaned.wav"), y_cleaned, sr)
+    sf.write(os.path.join(output_dir, "harmonic.wav"), y_harmonic, sr)
+    sf.write(os.path.join(output_dir, "gated.wav"),    y_gated,    sr)
+    sf.write(os.path.join(output_dir, "cleaned.wav"),  y_cleaned,  sr)
 
     results = {
         "filename": basename,
         "sample_rate": sr,
         "duration_seconds": round(len(y) / sr, 2),
+        # Legacy "snr_*" field names retained for API back-compat.
+        # These are actually an in-call / out-of-call energy ratio (dB), NOT true SNR.
+        # See metric_note below, and scripts/eval/ for real SI-SDR on synthetic mixes.
         "snr_before_db": round(snr_before, 2),
         "snr_after_db": round(snr_after, 2),
         "snr_improvement_db": round(improvement, 2),
+        "metric_note": "snr_* fields are an in-call/out-of-call energy ratio (proxy), not a true SNR. Real SI-SDR in scripts/eval/.",
         "detection_method": detection_method,
         "calls_detected": calls_detected,
         "processing_params": {

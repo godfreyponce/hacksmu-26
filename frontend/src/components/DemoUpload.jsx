@@ -7,7 +7,7 @@ const PIPELINE_STEPS = [
   { label: 'Spectral subtraction', detail: 'Removing residual broadband noise from the harmonic component' },
   { label: 'Bandpass filtering', detail: 'Isolating 8–1200 Hz range where elephant vocalizations live' },
   { label: 'Generating spectrograms', detail: 'Creating before & after frequency visualizations' },
-  { label: 'Computing SNR', detail: 'Measuring signal-to-noise ratio improvement' },
+  { label: 'Computing in-call energy ratio', detail: 'Proxy metric — no clean reference exists for true SNR' },
 ]
 
 function formatTime(seconds) {
@@ -140,7 +140,7 @@ export default function DemoUpload() {
           </div>
 
           <p className="demo-upload-footer">
-            Runs a 6-stage pipeline: Load → Noise Profile → HPSS → Spectral Gate → Spectrogram → SNR Validation
+            Runs a 6-stage pipeline: Load → Noise Profile → HPSS → Spectral Gate → Spectrogram → Energy-ratio check
           </p>
 
           {error && <p className="demo-error">{error}</p>}
@@ -162,8 +162,11 @@ export default function DemoUpload() {
         </nav>
 
         <div className="demo-processing">
-          <h2>Analyzing recording</h2>
+          <h2>Processing on server...</h2>
           <p className="demo-processing-sub">Running 6-stage HPSS pipeline</p>
+          <p className="demo-processing-sub" style={{ opacity: 0.6, fontSize: '0.85em' }}>
+            Steps shown are illustrative — processing runs server-side.
+          </p>
 
           <div className="pipeline-steps">
             {PIPELINE_STEPS.map((step, i) => {
@@ -222,7 +225,10 @@ export default function DemoUpload() {
             </div>
           </div>
 
-          {/* SNR Metrics */}
+          {/* In-call Energy Ratio (proxy for cleanup — not a true SNR) */}
+          <h3 style={{ margin: '1.5rem 0 0.5rem', fontSize: '1rem', opacity: 0.85 }}>
+            In-call vs out-of-call energy ratio <span style={{ opacity: 0.6 }}>(proxy for cleanup)</span>
+          </h3>
           <div className="snr-metrics">
             <div className="snr-card">
               <span className="snr-label">Before</span>
@@ -244,18 +250,20 @@ export default function DemoUpload() {
             </div>
           </div>
 
-          {/* SNR Explainer */}
+          {/* Honest explainer */}
           <button className="snr-explainer-toggle" onClick={() => setSnrExpanded(!snrExpanded)}>
-            What is SNR? {snrExpanded ? '\u25B2' : '\u25BC'}
+            What does this ratio mean? {snrExpanded ? '\u25B2' : '\u25BC'}
           </button>
           {snrExpanded && (
             <div className="snr-explainer">
-              <strong>Signal-to-Noise Ratio (SNR)</strong> measures how much louder the elephant call
-              is compared to background noise, in decibels (dB). Higher is better. Our HPSS pipeline
-              improved this recording by <strong>+{improvement?.toFixed(1)} dB</strong> — meaning the
-              elephant call is now {Math.round(Math.pow(10, (improvement || 0) / 20))}x louder
-              relative to the noise floor. This enables researchers to analyze vocalizations that were
-              previously inaudible beneath mechanical noise.
+              We measure the ratio of RMS energy during labeled call windows vs. the rest of the
+              recording, in dB. It's a useful <strong>proxy</strong> for how much the background was
+              cleaned up, but it is <strong>not a true SNR</strong> — that would require a clean
+              reference recording, which we don't have for field data. A rising ratio can mean
+              cleaner background <em>or</em> more aggressive attenuation — inspect the audio and
+              spectrogram before drawing conclusions. For this recording, the background floor
+              during out-of-call gaps was suppressed by roughly
+              <strong> +{improvement?.toFixed(1)} dB</strong> relative to the call windows.
             </div>
           )}
 
