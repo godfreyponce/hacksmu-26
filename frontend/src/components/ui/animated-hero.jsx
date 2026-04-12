@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { MoveRight, Headphones } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
-function AnimatedHero({ onExplore, onDashboard }) {
+function AnimatedHero() {
   const [titleNumber, setTitleNumber] = useState(0)
   const titles = useMemo(
     () => ["decoded", "analyzed", "understood", "preserved", "revealed"],
@@ -31,12 +29,6 @@ function AnimatedHero({ onExplore, onDashboard }) {
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <div>
-            <Button variant="secondary" size="sm" style={{ gap: '12px', display: 'flex', alignItems: 'center' }}>
-              212 calls processed with +5.7dB improvement <MoveRight style={{ width: '16px', height: '16px' }} />
-            </Button>
-          </div>
-
           <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
             <h1 style={{
               fontFamily: 'Cormorant Garamond, Georgia, serif',
@@ -97,14 +89,6 @@ function AnimatedHero({ onExplore, onDashboard }) {
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Button size="lg" variant="outline" onClick={onDashboard} style={{ gap: '12px', display: 'flex', alignItems: 'center' }}>
-              Explore spectrograms <Headphones style={{ width: '18px', height: '18px' }} />
-            </Button>
-            <Button size="lg" onClick={onExplore} style={{ gap: '12px', display: 'flex', alignItems: 'center' }}>
-              Try live demo <MoveRight style={{ width: '18px', height: '18px' }} />
-            </Button>
-          </div>
         </div>
       </div>
     </div>
