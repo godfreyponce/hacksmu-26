@@ -1,0 +1,8 @@
+<svg width="620" height="148" viewBox="0 0 620 148" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="620" height="148" fill="#07110C"/>
+  <rect x="33" y="22" width="108" height="104" rx="20" fill="#07110C" stroke="rgba(232,237,229,0.18)"/>
+  <text x="87" y="83" text-anchor="middle" fill="#7EC8A0" font-size="44" font-family="Georgia, 'Times New Roman', serif">~</text>
+
+  <text x="171" y="86" fill="#E8EDE5" font-size="58" font-family="'Avenir Next', 'Trebuchet MS', sans-serif">Echo</text>
+  <text x="303" y="86" fill="#7EC8A0" font-size="66" font-style="italic" font-family="Georgia, 'Times New Roman', serif">Map</text>
+</svg>

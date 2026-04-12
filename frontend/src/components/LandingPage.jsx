@@ -212,27 +212,11 @@ export default function LandingPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '14px',
-              border: '1px solid rgba(255,255,255,0.12)',
-              display: 'grid',
-              placeItems: 'center',
-              color: '#7ec8a0',
-              fontSize: '1.7rem',
-              background: 'rgba(255,255,255,0.02)'
-            }}
-          >
-            ~
-          </div>
-          <div style={{ fontFamily: 'DM Sans, Avenir Next, sans-serif', fontSize: '24px', letterSpacing: '-0.02em' }}>
-            Echo
-            <em style={{ color: '#7ec8a0', fontFamily: 'Cormorant Garamond, Georgia, serif', fontStyle: 'italic' }}>
-              Map
-            </em>
-          </div>
+          <img
+            src="/logo-full.svg"
+            alt="EchoMap"
+            style={{ height: '54px', width: 'auto', display: 'block' }}
+          />
         </div>
 
         <div
@@ -379,8 +363,6 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
-
-      <div style={{ height: '20vh', background: 'linear-gradient(rgba(9,11,8,0), #090b08)' }} />
 
       <div className="features" id="science">
         <p className="features-eyebrow">Built for researchers</p>

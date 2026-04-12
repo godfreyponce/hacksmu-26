@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_BASE_URL, buildApiUrl, fetchJson } from '../lib/api'
 
 const stages = ['hpss', 'clean']
-const stageLabels = { hpss: 'Original (Noisy)', clean: 'Cleaned' }
+const stageLabels = { hpss: 'Original', clean: 'Cleaned' }
 
 function RecordingCard({ call }) {
   const [stage, setStage] = useState('clean')
-  const apiUrl = import.meta.env.VITE_API_URL
 
   return (
     <div className="demo-card">
@@ -30,18 +30,18 @@ function RecordingCard({ call }) {
 
       <img
         className="demo-spectrogram"
-        src={`${apiUrl}/calls/${call.id}/spectrogram/${stage}`}
+        src={buildApiUrl(`/calls/${call.id}/spectrogram/${stage}`)}
         alt={`${call.call_id_csv} ${stageLabels[stage]}`}
       />
 
       <div className="demo-audio-row">
         <div>
-          <label>Original</label>
-          <audio controls src={`${apiUrl}/calls/${call.id}/audio/hpss`} />
+          <label>Original Recording</label>
+          <audio controls src={buildApiUrl(`/calls/${call.id}/audio/hpss`)} />
         </div>
         <div>
-          <label>Cleaned</label>
-          <audio controls src={`${apiUrl}/calls/${call.id}/audio/clean`} />
+          <label>After Processing</label>
+          <audio controls src={buildApiUrl(`/calls/${call.id}/audio/clean`)} />
         </div>
       </div>
     </div>
@@ -50,39 +50,50 @@ function RecordingCard({ call }) {
 
 export default function DemoShowcase() {
   const navigate = useNavigate()
-  const apiUrl = import.meta.env.VITE_API_URL
   const [calls, setCalls] = useState([])
   const [stats, setStats] = useState(null)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     Promise.all([
-      fetch(`${apiUrl}/calls`).then(r => r.json()),
-      fetch(`${apiUrl}/stats`).then(r => r.json()),
-    ]).then(([callsData, statsData]) => {
-      setCalls(callsData.slice(0, 5))
-      setStats(statsData)
-    }).catch(err => console.error('Demo load failed:', err))
-  }, [apiUrl])
+      fetchJson('/calls'),
+      fetchJson('/stats'),
+    ])
+      .then(([callsData, statsData]) => {
+        const rankedCalls = [...callsData].sort(
+          (a, b) => (b.snr_improvement_db ?? Number.NEGATIVE_INFINITY) - (a.snr_improvement_db ?? Number.NEGATIVE_INFINITY)
+        )
+        setCalls(rankedCalls.slice(0, 5))
+        setStats(statsData)
+        setLoadError('')
+      })
+      .catch((err) => {
+        console.error('Demo load failed:', err)
+        setCalls([])
+        setStats(null)
+        setLoadError(err.message || 'Unable to load processed recordings')
+      })
+  }, [])
 
-  if (!calls.length) return null
+  const hasCalls = calls.length > 0
 
   return (
     <section className="demo-showcase" id="transform">
       <div className="demo-header">
-        <p className="demo-eyebrow">LIVE RESULTS</p>
+        <p className="demo-eyebrow">Live Results · Top Recordings</p>
         <h2>Hear the <em>difference</em></h2>
         <p className="demo-sub">
-          Top 5 recordings by noise reduction. Toggle between original and cleaned audio.
+          Our top 5 recordings ranked by noise reduction improvement. Toggle between original field audio and processed output.
         </p>
-        <button className="btn btn-primary" onClick={() => navigate('/demo')}>
-          Run live demo
+        <button className="btn btn-primary" onClick={() => navigate('/demo')} style={{ marginTop: '8px' }}>
+          Try your own recording
         </button>
       </div>
 
       {stats && (
         <div className="demo-stats-row">
           <div className="demo-stat">
-            <span className="demo-stat-value">{calls.length}</span>
+            <span className="demo-stat-value">{hasCalls ? calls.length : 0}</span>
             <span className="demo-stat-label">Recordings Shown</span>
           </div>
           <div className="demo-stat">
@@ -90,7 +101,7 @@ export default function DemoShowcase() {
             <span className="demo-stat-label">Calls Detected</span>
           </div>
           <div className="demo-stat">
-            <span className="demo-stat-value">+{calls[0]?.snr_improvement_db?.toFixed(1)} dB</span>
+            <span className="demo-stat-value">{hasCalls ? `+${calls[0]?.snr_improvement_db?.toFixed(1)} dB` : 'n/a'}</span>
             <span className="demo-stat-label">Best Improvement</span>
           </div>
           <div className="demo-stat">
@@ -100,11 +111,25 @@ export default function DemoShowcase() {
         </div>
       )}
 
-      <div className="demo-cards">
-        {calls.map((call) => (
-          <RecordingCard key={call.id} call={call} />
-        ))}
-      </div>
+      {hasCalls ? (
+        <div className="demo-cards">
+          {calls.map((call) => (
+            <RecordingCard key={call.id} call={call} />
+          ))}
+        </div>
+      ) : (
+        <div className="demo-empty-state">
+          <h3>{loadError ? 'Cannot reach processing API' : 'No processed calls yet'}</h3>
+          <p>
+            {loadError
+              ? `${loadError}. Current API base: ${API_BASE_URL}`
+              : 'Run the processing pipeline and this Top 5 section will populate automatically.'}
+          </p>
+          <button className="btn btn-outline" onClick={() => navigate('/demo')}>
+            Open live demo upload
+          </button>
+        </div>
+      )}
     </section>
   )
 }

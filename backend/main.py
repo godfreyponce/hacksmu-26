@@ -192,7 +192,7 @@ class QueryRequest(BaseModel):
 async def natural_language_query(req: QueryRequest):
     """
     Natural language question about the elephant call data.
-    Uses Gemini if GOOGLE_API_KEY is set, otherwise returns a stats-based answer.
+    Uses Gemini if GEMINI_API_KEY is set, otherwise returns a stats-based answer.
     """
     raw = _load_summary()
     total = sum(len(r.get("calls_detected", [])) for r in raw)
@@ -210,7 +210,7 @@ async def natural_language_query(req: QueryRequest):
                 f"SNR improvement {r.get('snr_improvement_db',0):+.1f} dB"
             )
 
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY", "")
 
     if api_key:
         try:
@@ -240,7 +240,7 @@ Provide a helpful, scientifically accurate response. Keep it concise."""
         "answer": f"EchoMap has processed {len(raw)} recordings containing {total} elephant calls. "
                   f"{improved} recordings showed noise improvement. "
                   f"Best result: {best.get('filename','')} at +{best.get('snr_improvement_db',0):.1f} dB. "
-                  f"Set GOOGLE_API_KEY for detailed AI-powered answers."
+                  f"Set GEMINI_API_KEY for detailed AI-powered answers."
     }
 
 

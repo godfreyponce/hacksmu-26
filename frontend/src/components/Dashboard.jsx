@@ -1,86 +1,182 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SpecViewer from './SpecViewer'
-import CallMap from './CallMap'
 import ClipPlayer from './ClipPlayer'
+import OpenSoundDashboard from './OpenSoundDashboard'
+import CallAnalysisOverview from './CallAnalysisOverview'
+import { fetchJson } from '../lib/api'
+import { matchesCategory } from '../lib/callCategories'
+
+function callMatchesSelectedCategory(call, selectedCategory) {
+  if (!selectedCategory) return true
+
+  if (matchesCategory(call?.call_type, selectedCategory)) {
+    return true
+  }
+
+  const nestedCalls = call?.calls || []
+  return nestedCalls.some((entry) => matchesCategory(entry?.call_type, selectedCategory))
+}
 
 export default function Dashboard() {
-  const apiUrl = import.meta.env.VITE_API_URL
+  const navigate = useNavigate()
   const [calls, setCalls] = useState([])
   const [stats, setStats] = useState({ total_calls: 0, avg_snr_improvement_db: 0, by_call_type: {} })
   const [selectedId, setSelectedId] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     const load = async () => {
-      const [callsRes, statsRes] = await Promise.all([
-        fetch(`${apiUrl}/calls`),
-        fetch(`${apiUrl}/stats`)
+      const [callsData, statsData] = await Promise.all([
+        fetchJson('/calls'),
+        fetchJson('/stats')
       ])
 
-      const callsData = await callsRes.json()
-      const statsData = await statsRes.json()
       setCalls(callsData)
       setStats(statsData)
+      setLoadError('')
       if (callsData.length > 0) {
         setSelectedId(callsData[0].id)
       }
     }
 
-    load().catch((err) => console.error('Dashboard load failed:', err))
-  }, [apiUrl])
+    load().catch((err) => {
+      console.error('Dashboard load failed:', err)
+      setLoadError(err.message || 'Failed to load dashboard data')
+      setCalls([])
+      setStats({ total_calls: 0, avg_snr_improvement_db: 0, by_call_type: {} })
+    })
+  }, [])
 
-  const selectedCall = useMemo(() => calls.find((c) => c.id === selectedId) ?? null, [calls, selectedId])
+  const filteredCalls = useMemo(() => {
+    if (!selectedCategory) return calls
+    return calls.filter((call) => callMatchesSelectedCategory(call, selectedCategory))
+  }, [calls, selectedCategory])
+
+  useEffect(() => {
+    if (!filteredCalls.length) {
+      setSelectedId(null)
+      return
+    }
+    const hasSelectedInFiltered = filteredCalls.some((call) => call.id === selectedId)
+    if (!hasSelectedInFiltered) {
+      setSelectedId(filteredCalls[0].id)
+    }
+  }, [filteredCalls, selectedId])
+
+  const selectedCall = useMemo(() => filteredCalls.find((call) => call.id === selectedId) ?? null, [filteredCalls, selectedId])
 
   return (
-    <div className="dashboard">
-      <header className="dash-header">
-        <div>
-          <h1>EchoMap Research Dashboard</h1>
-          <p>HPSS + spectral-gate denoising with per-recording metrics and spectrogram comparison.</p>
+    <div className="dash-page">
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          background: '#07110c',
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '14px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }} onClick={() => navigate('/')}>
+          <img
+            src="/logo-full.svg"
+            alt="EchoMap"
+            style={{ height: '54px', width: 'auto', display: 'block' }}
+          />
         </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '30px',
+            color: 'rgba(232,237,229,0.78)',
+            fontFamily: 'DM Sans, Avenir Next, sans-serif',
+            fontSize: '14px',
+            fontWeight: 700
+          }}
+        >
+          <a href="/#transform" style={{ textDecoration: 'none' }}>How it works</a>
+          <a href="/#science" style={{ textDecoration: 'none' }}>The science</a>
+          <a href="/#partners" style={{ textDecoration: 'none' }}>ElephantVoices</a>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/demo')}
+            style={{ fontFamily: 'DM Sans, Avenir Next, sans-serif', fontSize: '14px', padding: '12px 26px' }}
+          >
+            Live Demo
+          </button>
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate('/')}
+            style={{ fontFamily: 'DM Sans, Avenir Next, sans-serif', fontSize: '14px', padding: '12px 22px' }}
+          >
+            Back To Home
+          </button>
+        </div>
+      </div>
+
+      <header className="dash-hero">
+        <p className="dash-hero-eyebrow">Research Dashboard</p>
+        <h1>Call <em>Analysis</em></h1>
+        <p className="dash-hero-sub">
+          HPSS + Wiener-gated spectral subtraction over 44 Amboseli field recordings.
+        </p>
       </header>
 
-      <section className="stat-grid">
-        <article>
-          <h3>Total Calls</h3>
-          <p>{stats.total_calls}</p>
-        </article>
-        <article>
-          <h3>Avg In-call Energy Ratio Δ (dB)</h3>
-          <p>{Number(stats.avg_snr_improvement_db || 0).toFixed(1)}</p>
-        </article>
-        <article>
-          <h3>Call Type Breakdown (from labels)</h3>
-          <ul>
-            {Object.entries(stats.by_call_type || {}).map(([type, count]) => (
-              <li key={type}>
-                <span>{type}</span>
-                <strong>{count}</strong>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </section>
+      {loadError && (
+        <div className="dash-error">
+          <p>{loadError}</p>
+        </div>
+      )}
 
-      <main className="dash-main">
-        <aside className="call-list">
-          <h3>Processed Calls</h3>
-          {calls.map((call) => (
-            <button
-              key={call.id}
-              className={call.id === selectedId ? 'active' : ''}
-              onClick={() => setSelectedId(call.id)}
-            >
-              {call.call_id_csv} · {call.call_type || 'unknown'}
-            </button>
-          ))}
+      <CallAnalysisOverview calls={calls} stats={stats} />
+
+      <div className="dash-content">
+        <aside className="dash-sidebar">
+          <div className="dash-sidebar-header">
+            <h3>Recordings</h3>
+            {selectedCategory && (
+              <span className="dash-filter-badge">{selectedCategory}</span>
+            )}
+          </div>
+          <div className="dash-call-list">
+            {filteredCalls.map((call) => (
+              <button
+                key={call.id}
+                className={`dash-call-item ${call.id === selectedId ? 'is-active' : ''}`}
+                onClick={() => setSelectedId(call.id)}
+              >
+                <span className="dash-call-name">{call.call_id_csv}</span>
+                <span className="dash-call-type">{call.call_type || 'unknown'}</span>
+              </button>
+            ))}
+            {!filteredCalls.length && (
+              <p className="dash-empty-msg">No calls match "{selectedCategory}"</p>
+            )}
+          </div>
         </aside>
 
-        <section className="dash-panels">
-          <CallMap calls={calls} selectedId={selectedId} />
+        <div className="dash-orbital-container">
+          <OpenSoundDashboard onCategorySelect={setSelectedCategory} />
+        </div>
+
+        <div className="dash-analysis">
           <SpecViewer call={selectedCall} />
           <ClipPlayer call={selectedCall} />
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
   )
 }

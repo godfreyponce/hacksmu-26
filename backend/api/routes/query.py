@@ -9,7 +9,7 @@ from middleware.auth import verify_m2m_token
 
 router = APIRouter()
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY", ""))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 
 
 class QueryRequest(BaseModel):

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_BASE_URL, buildApiUrl } from '../lib/api'
 
 const PIPELINE_STEPS = [
   { label: 'Loading audio', detail: 'Reading WAV file and detecting sample rate' },
@@ -19,7 +20,6 @@ function formatTime(seconds) {
 
 export default function DemoUpload() {
   const navigate = useNavigate()
-  const apiUrl = import.meta.env.VITE_API_URL
   const fileInputRef = useRef(null)
 
   const [phase, setPhase] = useState('upload')
@@ -33,8 +33,8 @@ export default function DemoUpload() {
   const resolveAssetUrl = useCallback((path) => {
     if (!path) return ''
     if (path.startsWith('http://') || path.startsWith('https://')) return path
-    return `${apiUrl}${path}`
-  }, [apiUrl])
+    return buildApiUrl(path)
+  }, [])
 
   const processFile = useCallback(async (file) => {
     setPhase('processing')
@@ -49,7 +49,7 @@ export default function DemoUpload() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch(`${apiUrl}/process`, { method: 'POST', body: formData })
+      const res = await fetch(buildApiUrl('/process'), { method: 'POST', body: formData })
       if (!res.ok) {
         const msg = await res.text()
         throw new Error(msg || `Server error ${res.status}`)
@@ -69,7 +69,7 @@ export default function DemoUpload() {
       setError(err.message)
       setPhase('upload')
     }
-  }, [apiUrl])
+  }, [])
 
   const handleDrop = (e) => {
     e.preventDefault()
@@ -144,6 +144,9 @@ export default function DemoUpload() {
           </p>
 
           {error && <p className="demo-error">{error}</p>}
+          {!error && !import.meta.env.VITE_API_URL && (
+            <p className="demo-upload-sub">Using default API endpoint: {API_BASE_URL}</p>
+          )}
         </div>
       </div>
     )

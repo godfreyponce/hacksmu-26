@@ -3,9 +3,6 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
-// Only initialize Mapbox if a real token is present. A placeholder like
-// "your_mapbox_token_here" would make `new mapboxgl.Map()` throw and crash
-// the whole Dashboard (which is why /research was rendering blank).
 const TOKEN_VALID = Boolean(MAPBOX_TOKEN) && !MAPBOX_TOKEN.startsWith('your_') && MAPBOX_TOKEN.startsWith('pk.')
 if (TOKEN_VALID) {
   mapboxgl.accessToken = MAPBOX_TOKEN
@@ -62,6 +59,7 @@ export default function CallMap({ calls = [], selectedId }) {
   }, [])
 
   useEffect(() => {
+    if (!TOKEN_VALID) return
     if (!map.current) return
 
     const features = calls.map((call, idx) => {
@@ -87,17 +85,9 @@ export default function CallMap({ calls = [], selectedId }) {
 
   if (!TOKEN_VALID) {
     return (
-      <div className="call-map call-map-placeholder" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        minHeight: 200, padding: '1.5rem', textAlign: 'center',
-        background: '#11151c', color: '#8a94a3', border: '1px dashed #2a3140',
-        borderRadius: 8, fontSize: '0.9rem', lineHeight: 1.5,
-      }}>
-        <div>
-          <strong style={{ color: '#c3cfdc' }}>Map disabled</strong><br />
-          Set <code>VITE_MAPBOX_TOKEN</code> in <code>frontend/.env</code> to a real
-          Mapbox public token (<code>pk.*</code>) to enable the call-distribution map.
-        </div>
+      <div className="call-map call-map-disabled">
+        <h3>Map disabled</h3>
+        <p>Set <code>VITE_MAPBOX_TOKEN</code> in <code>frontend/.env</code> to a real Mapbox public token (<code>pk.*</code>) to enable the call-distribution map.</p>
       </div>
     )
   }

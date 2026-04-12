@@ -10,7 +10,8 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
