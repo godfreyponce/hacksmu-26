@@ -1,16 +1,16 @@
 import { useState } from 'react'
+import { buildApiUrl } from '../lib/api'
 
 const stages = ['hpss', 'gated', 'clean']
 
 export default function SpecViewer({ call }) {
   const [stage, setStage] = useState('clean')
-  const apiUrl = import.meta.env.VITE_API_URL
 
   if (!call) {
     return <div className="spec-viewer">No processed calls yet.</div>
   }
 
-  const imageSrc = `${apiUrl}/calls/${call.id}/spectrogram/${stage}`
+  const imageSrc = buildApiUrl(`/calls/${call.id}/spectrogram/${stage}`)
 
   return (
     <div className="spec-viewer">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
+import { buildApiUrl } from '../lib/api'
 
 const stages = ['hpss', 'gated', 'clean']
 
@@ -7,7 +8,6 @@ export default function ClipPlayer({ call }) {
   const containerRef = useRef(null)
   const wavesurfer = useRef(null)
   const [stage, setStage] = useState('clean')
-  const apiUrl = import.meta.env.VITE_API_URL
 
   useEffect(() => {
     if (!containerRef.current || !call) return
@@ -23,10 +23,10 @@ export default function ClipPlayer({ call }) {
       responsive: true
     })
 
-    wavesurfer.current.load(`${apiUrl}/calls/${call.id}/audio/${stage}`)
+    wavesurfer.current.load(buildApiUrl(`/calls/${call.id}/audio/${stage}`))
 
     return () => wavesurfer.current?.destroy()
-  }, [call, stage, apiUrl])
+  }, [call, stage])
 
   const handlePlayPause = () => {
     wavesurfer.current?.playPause()

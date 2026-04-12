@@ -749,6 +749,26 @@ a {
   gap: 20px;
 }
 
+.demo-empty-state {
+  border: 1px solid rgba(126, 200, 160, 0.2);
+  border-radius: 16px;
+  padding: 30px 24px;
+  background: linear-gradient(180deg, rgba(8, 12, 9, 0.62), rgba(8, 12, 9, 0.45));
+  text-align: center;
+}
+
+.demo-empty-state h3 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(30px, 4vw, 42px);
+  letter-spacing: -0.02em;
+}
+
+.demo-empty-state p {
+  margin: 8px auto 18px;
+  color: rgba(232, 237, 229, 0.62);
+  max-width: 620px;
+}
+
 .demo-card {
   background: rgba(8, 12, 9, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1317,5 +1337,240 @@ audio::-webkit-media-controls-time-remaining-display {
 
   .snr-arrow {
     transform: rotate(90deg);
+  }
+}
+
+/* =========================================
+   Gemini Categories - Classification Visual
+   ========================================= */
+
+.gemini-categories {
+  background: rgba(8, 12, 9, 0.6);
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 14px;
+}
+
+.gemini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.gemini-title h2 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.gemini-eyebrow {
+  font-family: 'DM Sans', 'Avenir Next', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--leaf);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.gemini-dominant {
+  text-align: right;
+}
+
+.dominant-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.dominant-type {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  font-style: italic;
+  text-transform: capitalize;
+}
+
+.gemini-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.category-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 50px;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-icon {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.category-name {
+  font-family: 'DM Sans', 'Avenir Next', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  text-transform: capitalize;
+}
+
+.category-count {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.category-bar-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.category-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.category-pct {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.gemini-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.gemini-stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.gemini-stat-card .stat-value {
+  display: block;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--leaf);
+  letter-spacing: -0.02em;
+}
+
+.gemini-stat-card .stat-label {
+  display: block;
+  font-family: 'DM Sans', 'Avenir Next', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.gemini-selected {
+  background: rgba(126, 200, 160, 0.05);
+  border: 1px solid rgba(126, 200, 160, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.selected-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.selected-eyebrow {
+  font-family: 'DM Sans', 'Avenir Next', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--leaf);
+}
+
+.selected-id {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.selected-details {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.detail-value {
+  font-family: 'DM Sans', 'Avenir Next', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detail-value.type-badge {
+  text-transform: capitalize;
+  font-style: italic;
+}
+
+.detail-value.snr-gain {
+  color: var(--leaf);
+}
+
+@media (max-width: 768px) {
+  .gemini-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .selected-details {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .category-row {
+    grid-template-columns: 100px 1fr 40px;
   }
 }

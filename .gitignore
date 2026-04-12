@@ -12,3 +12,10 @@ data/echomap.db
 data/cleaned/
 data/gated/
 data/spectrograms/
+
+# Environment files with secrets - NEVER commit
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env

@@ -3,31 +3,37 @@ import SpecViewer from './SpecViewer'
 import CallMap from './CallMap'
 import VoiceBar from './VoiceBar'
 import ClipPlayer from './ClipPlayer'
+import GeminiCategories from './GeminiCategories'
+import { fetchJson } from '../lib/api'
 
 export default function Dashboard() {
-  const apiUrl = import.meta.env.VITE_API_URL
   const [calls, setCalls] = useState([])
   const [stats, setStats] = useState({ total_calls: 0, avg_confidence: 0, by_call_type: {} })
   const [selectedId, setSelectedId] = useState(null)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     const load = async () => {
-      const [callsRes, statsRes] = await Promise.all([
-        fetch(`${apiUrl}/calls`),
-        fetch(`${apiUrl}/stats`)
+      const [callsData, statsData] = await Promise.all([
+        fetchJson('/calls'),
+        fetchJson('/stats')
       ])
 
-      const callsData = await callsRes.json()
-      const statsData = await statsRes.json()
       setCalls(callsData)
       setStats(statsData)
+      setLoadError('')
       if (callsData.length > 0) {
         setSelectedId(callsData[0].id)
       }
     }
 
-    load().catch((err) => console.error('Dashboard load failed:', err))
-  }, [apiUrl])
+    load().catch((err) => {
+      console.error('Dashboard load failed:', err)
+      setLoadError(err.message || 'Failed to load dashboard data')
+      setCalls([])
+      setStats({ total_calls: 0, avg_confidence: 0, by_call_type: {} })
+    })
+  }, [])
 
   const selectedCall = useMemo(() => calls.find((c) => c.id === selectedId) ?? null, [calls, selectedId])
 
@@ -41,27 +47,13 @@ export default function Dashboard() {
         <VoiceBar />
       </header>
 
-      <section className="stat-grid">
-        <article>
-          <h3>Total Calls</h3>
-          <p>{stats.total_calls}</p>
-        </article>
-        <article>
-          <h3>Avg Confidence</h3>
-          <p>{Number(stats.avg_confidence || 0).toFixed(2)}</p>
-        </article>
-        <article>
-          <h3>Classification Breakdown</h3>
-          <ul>
-            {Object.entries(stats.by_call_type || {}).map(([type, count]) => (
-              <li key={type}>
-                <span>{type}</span>
-                <strong>{count}</strong>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </section>
+      <GeminiCategories stats={stats} selectedCall={selectedCall} />
+
+      {loadError && (
+        <p className="demo-error" style={{ margin: '8px 0 0' }}>
+          {loadError}
+        </p>
+      )}
 
       <main className="dash-main">
         <aside className="call-list">

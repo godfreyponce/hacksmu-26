@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
+import { buildApiUrl } from '../lib/api'
 
 export default function useVoiceQuery() {
   const [isListening, setIsListening] = useState(false)
   const [response, setResponse] = useState(null)
-  const apiUrl = import.meta.env.VITE_API_URL
   const elevenKey = import.meta.env.VITE_ELEVENLABS_API_KEY
   const elevenVoiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'
   const authToken = import.meta.env.VITE_AUTH0_M2M_TOKEN
@@ -58,7 +58,7 @@ export default function useVoiceQuery() {
         const blob = new Blob(chunks, { type: 'audio/webm' })
         const text = await transcribeWithElevenLabs(blob)
 
-        const res = await fetch(`${apiUrl}/query`, {
+        const res = await fetch(buildApiUrl('/query'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export default function useVoiceQuery() {
       setResponse('Voice query failed. Check API keys and auth token.')
       setIsListening(false)
     }
-  }, [apiUrl, authToken, elevenKey])
+  }, [authToken, elevenKey])
 
   const stopListening = useCallback(() => {
     setIsListening(false)

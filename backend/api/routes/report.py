@@ -10,7 +10,7 @@ from middleware.auth import verify_m2m_token
 
 router = APIRouter()
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY", ""))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
 

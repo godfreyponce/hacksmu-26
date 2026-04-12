@@ -2,6 +2,8 @@ from pathlib import Path
 
 import librosa
 import librosa.display
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
