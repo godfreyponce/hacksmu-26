@@ -1,8 +1,14 @@
 # EchoMap — Elephant Vocalization Denoising Platform
 
+<p align="center">
+  <img src="scripts/compare/out/original_spec.png" alt="Spectrogram of the original recording, 0 to 200 Hz, with steady horizontal noise bands across the clip" width="420">
+  <img src="scripts/compare/out/ours_spec.png" alt="Spectrogram of the same recording after the pipeline, 0 to 200 Hz, with the steady bands mostly gone" width="420">
+</p>
+<p align="center"><sub>same recording, 0 to 200 Hz. before on the left, after on the right.</sub></p>
+
 **HackSMU VII / iMasons · ElephantVoices challenge:** remove overlapping mechanical noise (airplanes, cars, generators) from elephant field recordings *without* distorting the elephant calls.
 
-EchoMap is a deterministic, ML-free DSP pipeline that exploits a structural difference rather than a frequency one — elephant rumbles are sustained harmonic bands; mechanical noise is broadband and stationary.
+The denoising pipeline uses classical DSP without ML. It's deterministic and exploits a structural difference rather than a frequency one: elephant rumbles are sustained harmonic bands, and mechanical noise is broadband and stationary.
 
 ## Pipeline (`backend/pipeline/process.py`)
 
@@ -21,7 +27,7 @@ The in-call/out-of-call energy ratio in the UI is a cleanup proxy and can be mis
 
 ### `scripts/eval/` — SI-SDR on synthetic clean+noise mixes
 
-5 labeled elephant rumbles × 2 noise types (generator, vehicle) × 4 input SNRs (−10, −5, 0, +5 dB) = 24 mixes. We measure scale-invariant SDR improvement against the clean reference.
+5 labeled elephant rumbles × 2 noise types (generator, vehicle) × 4 input SNRs (−10, −5, 0, +5 dB) is 40 possible mixes, capped at 24 by `MAX_MIXES`, so the run reaches 3 of the 5 rumbles. We measure scale-invariant SDR improvement against the clean reference.
 
 | Input SNR | SI-SDR Δ (dB) | Call-band cosine |
 |---|---|---|
@@ -44,7 +50,7 @@ Generic speech denoisers (RNNoise / Meta Denoiser / Adobe Podcast) high-pass bel
 | 35–200 Hz (harmonics) | +2.2 dB | +2.4 dB |
 | 200–1200 Hz (mid) | −3.4 dB | +3.8 dB |
 
-**Finding:** ~39 dB advantage in the elephant fundamental band. This is why classical DSP beats a generic ML denoiser for this use case.
+**Finding:** ~39 dB advantage in the elephant fundamental band. Classical DSP beats the simulated proxy here. This is a simulation, not a head-to-head with RNNoise or the other real denoisers.
 
 Reproduce: `python scripts/compare/infrasound_comparison.py`
 
@@ -85,7 +91,7 @@ Set `VITE_API_URL=http://localhost:8000` in `frontend/.env`.
 
 ## What this is *not*
 
-- Not an ML model. No training data, no GPU, no weights.
-- Not a call classifier. `call_type` is passthrough from the labeled CSV column.
+- Not an ML model. The denoising pipeline uses classical DSP without ML: no training data, no GPU, no weights. Gemini backs the `POST /query` chat.
+- Not a call classifier. `backend/main.py`, the backend this README runs, passes `call_type` through from the labeled CSV column. An older second backend in `backend/api/` still runs a Gemini Vision classifier during processing, and neither backend mounts `backend/api/routes/classify.py`.
 - Not a universal denoiser. It's tuned for elephant rumbles in mechanical-noise-dominated recordings; it will hurt already-clean audio (see SI-SDR table).
 - Not a fundamental-frequency estimator. At n\_fft=4096 / sr=48 kHz, the 8–35 Hz search range has only ~2 FFT bins — previous versions produced a meaningless 2-valued output; this field has been removed.
